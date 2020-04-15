@@ -1,10 +1,8 @@
+#include <boost/lexical_cast.hpp>
 #include <iostream>
-
 using namespace std;
 
-
-
 int main() {
-
-	return 0;
+  cout << boost::lexical_cast<int>("123") << endl;
+  return 0;
 }
