@@ -1,7 +1,5 @@
-﻿#pragma once
-#include <memory>
+#pragma once
 #include <mutex>
-#include <vector>
 #include <iostream>
 
 namespace helper
@@ -9,13 +7,7 @@ namespace helper
 	// Helper functions
 	template<typename ...Args>
 	void Write(std::mutex& m, Args&&... args) {
+		std::lock_guard<std::mutex> guard(m);
 		(std::cerr<<...<<std::forward<Args>(args)) << std::endl;
 	}
-}
-
-namespace wnet 
-{
-
-
-
 }

@@ -4,11 +4,14 @@ set(This client-server)
 set(CMAKE_CXX_STANDARD 17)
 
 set ( sources_files 
-  "src/client-server.cpp"
+  "src/server.cpp"
+  "src/client.cpp"
   "main.cpp"
 )
 set ( header_files
-  "include/client-server.hpp"
+  "include/server.hpp"
+  "include/client.hpp"
+  "include/helper.hpp"
 )
 add_definitions(-D_WIN32_WINNT=0x0601)
 
