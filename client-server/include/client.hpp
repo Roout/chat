@@ -74,6 +74,7 @@ private:
         std::size_t transferredBytes
     ) {
         if(transferredBytes) {
+            m_tempBuffer.resize(transferredBytes);
             std::cout << m_socket.remote_endpoint() << ": "<< m_tempBuffer << '\n'; 
         }
 
@@ -85,12 +86,12 @@ private:
             // peer has closed this connection
             // handle all recieved data
             m_isReading = false;
-            // start waiting for incoming massages again 
-            this->Read();
+            this->Close();
         } 
         else {
             m_isReading = false;
             std::cerr << error.message() << "\n";
+            this->Close();
         }
     }
 

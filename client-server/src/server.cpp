@@ -2,6 +2,8 @@
 #include "client.hpp"
 #include <functional>
 #include <iostream>
+#include <string>
+#include <sstream>
 
 void Session::Send(const std::string& text) {
     m_buffer = text;
@@ -42,11 +44,13 @@ void Session::WriteSomeHandler(
         // Connection was closed by the remote peer
         std::cerr<< error.message() << "\n";
         m_isWriting = false;
+        this->Close();
     }
     else {
         // Something went wrong
         std::cerr<< error.message() << "\n";
         m_isWriting = false;
+        this->Close();
     }
 }
 
@@ -65,10 +69,15 @@ void Server::Start() {
         if( !code ) {
             boost::system::error_code msg; 
             std::cerr << "Accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
+            
+            std::stringstream ss;
+            ss << "Welcome to my server, user ";
+            ss << m_socket->remote_endpoint(msg);
+            std::string welcomeMessage = ss.rdbuf()->str();
 
             m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket)));
             // welcome new user
-            this->Broadcast("Everybody, welcome new user to my server!");
+            this->Broadcast(welcomeMessage);
             // wait for the new connections again
             this->Start();
         }
