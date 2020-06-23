@@ -32,6 +32,18 @@ public:
         }
     }
     
+    void Write(std::string && text ) {
+        m_outcomingBuffer = std::move(text);
+        m_socket.async_write_some(
+            asio::buffer(m_outcomingBuffer),
+            std::bind(&Client::OnWrite, 
+                this, 
+                std::placeholders::_1, 
+                std::placeholders::_2
+            )
+        );
+    }
+
 private:
 
     void Close() {
@@ -95,12 +107,41 @@ private:
         }
     }
 
+    void OnWrite(
+        const boost::system::error_code& error, 
+        std::size_t transferredBytes
+    ) {
+        if( !error ){
+            std::cout << "Just sent: " << transferredBytes << " bytes\n";
+            m_transferred += transferredBytes;
+            std::cout << "Already sent: " << m_transferred << " bytes\n";
+            
+            if(m_transferred < m_outcomingBuffer.size() ) {
+                // we need to send other data
+                std::cout << " Trying to send: "<< m_outcomingBuffer.size() - m_transferred << " bytes\n";
+                m_socket.async_write_some(
+                    asio::buffer(&m_outcomingBuffer[m_transferred], m_outcomingBuffer.size() - m_transferred), 
+                    std::bind(&Client::OnWrite, 
+                        this, 
+                        std::placeholders::_1, 
+                        std::placeholders::_2
+                    )
+                );
+            }
+            else if( m_transferred == m_outcomingBuffer.size()) {
+                m_transferred = 0;
+            }
+        }
+    }
+
 private:
     
     std::shared_ptr<asio::io_context>   m_io;
     
     asio::ip::tcp::socket               m_socket;
     
-    bool                                m_isReading { false };
-    std::string                         m_tempBuffer;
+    bool            m_isReading { false };
+    std::string     m_tempBuffer;
+    std::string     m_outcomingBuffer;
+    std::size_t     m_transferred { 0 };                    
 };

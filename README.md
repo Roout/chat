@@ -1,7 +1,5 @@
-The client only has to understand the response based on the well-known application protocol, i.e. the content and the formatting of the data for the requested service
-
-TODO:
-1. define communications protocol.
+**Main points:**  
+1. 
 2. to formalize the data exchange even further, the server may implement an API
     - define  specific content format
     - parse it.
@@ -9,4 +7,17 @@ TODO:
 4. to prevent abuse and maximize availability, the server software may limit the availability to clients (agains DoS attacks)
 5. encryption should be applied if sensitive information is to be communicated between the client and the server. 
 
-TCP protocol will be used.
+TCP protocol will be used.  
+
+Done:
+[+] read data from client
+[+] pass read data to server  
+[+] broadcast recieved data to all clients
+[+] timely remove all connections that were closed
+TODO:
+Fix errors and add multithreading safety
+[-] strand for callbacks
+[-] queue to avoid race when writing/reading in the same direction/
+
+As result: 
+clients can write to 'chatroom' (now it's just a server) and read all text shown in the chat!

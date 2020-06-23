@@ -31,15 +31,18 @@
 
 namespace asio = boost::asio;
 
+
+class Server;
+
 /// TODO: Prevent several async_write/read in/from one direction!
 ///
 class Session final : public std::enable_shared_from_this<Session> {
 public:
     
-    Session( asio::ip::tcp::socket && socket ) :
-        m_socket { std::move(socket) }
-    {
-    }
+    Session( 
+        asio::ip::tcp::socket && socket, 
+        Server * const server 
+    );
 
     ~Session() {
         this->Close();
@@ -51,32 +54,20 @@ public:
      *  - that size(text) <= size(m_buffer)
      *  - send message only once
      */
-    void Send(const std::string& text);
+    void Send(std::string text);
 
     /**
      * Read @text from the remote connection
      */
-    void Read() {
+    void Read();
 
+    bool IsClosed() const noexcept {
+        return m_isClosed;
     }
-
     /**
      * Shutdown Session and close the socket  
      */
-    void Close() {
-        boost::system::error_code ec;
-    
-        m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-        if(ec) {
-
-        }
-        ec.clear();
-        
-        m_socket.close(ec);
-        if(ec) {
-
-        }
-    }
+    void Close();
 
 private:
     
@@ -85,21 +76,31 @@ private:
         std::size_t transferredBytes
     );
 
+    void ReadSomeHandler(
+        const boost::system::error_code& error, 
+        std::size_t transferredBytes
+    );
 private:
     /**
      * It's a socket connected to the server. 
      */
     asio::ip::tcp::socket   m_socket;
+
+    Server * const m_server { nullptr };
     /**
-     * A buffer used for incoming and outcoming information.
+     * A buffer used for outcoming information.
      */
     std::string m_buffer;
+    /**
+     * A buffer used for incoming information.
+     */
+    asio::streambuf m_streamBuffer;
     /**
      * Already transferred bytes 
      */
     size_t m_transferred { 0 };
 
-    bool m_isWriting { false };
+    bool m_isClosed { false };
 };
 
 class Server final {
@@ -111,8 +112,12 @@ public:
 
     void Shutdown();
 
-    void Broadcast(const std::string& text);
+    void Broadcast(std::string text);
     
+    void BroadcastEveryoneExcept(std::string text, const Session*);
+
+    void RemoveSession(const Session * s);
+
 private:
     /**
      * Context is being passed by a pointer because we don't need to know

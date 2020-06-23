@@ -34,7 +34,14 @@ int main() {
 			ts.emplace_back([io]() {
 				io->run();
 			});
-		io->run();
+		
+		cin.ignore();
+
+		while(true) {
+			string str;
+			getline(cin, str);
+			client.Write(std::move(str));
+		}
 	}
 	
 
