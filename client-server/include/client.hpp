@@ -12,6 +12,7 @@ public:
     
     Client(std::shared_ptr<asio::io_context> io):
         m_io { io },
+        m_strand { *io },
         m_socket{ *m_io }
     {
     }
@@ -22,13 +23,16 @@ public:
 
     void Connect(const std::string& path, std::uint16_t port) {
         asio::ip::tcp::resolver resolver(*m_io);
-        auto endpoints = resolver.resolve(path, std::to_string(port));
+        const auto endpoints = resolver.resolve(path, std::to_string(port));
         if( endpoints.empty() ) {
             this->Close();
         }
         else {
-            auto endpoint { endpoints.begin()->endpoint() };
-            m_socket.async_connect(endpoint, std::bind(&Client::OnConnect, this, std::placeholders::_1));
+            const auto endpoint { endpoints.cbegin()->endpoint() };
+            m_socket.async_connect(
+                endpoint, 
+                std::bind(&Client::OnConnect, this, std::placeholders::_1)  // implicit strand.
+            );
         }
     }
     
@@ -36,10 +40,13 @@ public:
         m_outcomingBuffer = std::move(text);
         m_socket.async_write_some(
             asio::buffer(m_outcomingBuffer),
-            std::bind(&Client::OnWrite, 
-                this, 
-                std::placeholders::_1, 
-                std::placeholders::_2
+            asio::bind_executor(
+                m_strand,
+                std::bind(&Client::OnWrite, 
+                    this, 
+                    std::placeholders::_1, 
+                    std::placeholders::_2
+                )
             )
         );
     }
@@ -74,20 +81,27 @@ private:
     void Read() {
         m_isReading = true;
         std::cout << "Start reading!\n";
-        m_tempBuffer.resize(1024);
+        m_incomingBuffer.resize(1024);
         m_socket.async_read_some(
-            asio::buffer(m_tempBuffer),
-            std::bind(&Client::OnRead, this, std::placeholders::_1, std::placeholders::_2)
+            asio::buffer(m_incomingBuffer),
+            asio::bind_executor(
+                m_strand,
+                std::bind(&Client::OnRead, this, std::placeholders::_1, std::placeholders::_2)
+            )
         );
     }
 
+    /**
+     * Completion handle. 
+     * Called when the client read something from the remote endpoint
+     */
     void OnRead(
         const boost::system::error_code& error, 
         std::size_t transferredBytes
     ) {
         if(transferredBytes) {
-            m_tempBuffer.resize(transferredBytes);
-            std::cout << m_socket.remote_endpoint() << ": "<< m_tempBuffer << '\n'; 
+            m_incomingBuffer.resize(transferredBytes);
+            std::cout << m_socket.remote_endpoint() << ": "<< m_incomingBuffer << '\n'; 
         }
 
         if( !error ) {
@@ -107,10 +121,15 @@ private:
         }
     }
 
+    /**
+     * Completion handle; called when the client write something to the remote endpoint
+     */
     void OnWrite(
         const boost::system::error_code& error, 
         std::size_t transferredBytes
     ) {
+        using namespace std::placeholders;
+
         if( !error ){
             std::cout << "Just sent: " << transferredBytes << " bytes\n";
             m_transferred += transferredBytes;
@@ -121,11 +140,7 @@ private:
                 std::cout << " Trying to send: "<< m_outcomingBuffer.size() - m_transferred << " bytes\n";
                 m_socket.async_write_some(
                     asio::buffer(&m_outcomingBuffer[m_transferred], m_outcomingBuffer.size() - m_transferred), 
-                    std::bind(&Client::OnWrite, 
-                        this, 
-                        std::placeholders::_1, 
-                        std::placeholders::_2
-                    )
+                    asio::bind_executor(m_strand, std::bind(&Client::OnWrite, this, _1, _2))
                 );
             }
             else if( m_transferred == m_outcomingBuffer.size()) {
@@ -137,11 +152,11 @@ private:
 private:
     
     std::shared_ptr<asio::io_context>   m_io;
-    
+    asio::io_context::strand            m_strand;
     asio::ip::tcp::socket               m_socket;
     
     bool            m_isReading { false };
-    std::string     m_tempBuffer;
+    std::string     m_incomingBuffer;
     std::string     m_outcomingBuffer;
     std::size_t     m_transferred { 0 };                    
 };

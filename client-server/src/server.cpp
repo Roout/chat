@@ -11,18 +11,22 @@ Session::Session(
     Server * server 
 ) :
     m_socket { std::move(socket) },
-    m_server { server }
+    m_server { server },
+    m_strand { *server->m_context }
 {
 }
 
 void Session::Send(std::string text) {
-    m_buffer = text;
+    m_buffer = std::move(text);
     m_socket.async_write_some(
         asio::buffer(m_buffer), 
-        std::bind(&Session::WriteSomeHandler, 
-            this->shared_from_this(), 
-            std::placeholders::_1, 
-            std::placeholders::_2
+        asio::bind_executor(
+            m_strand,
+            std::bind(&Session::WriteSomeHandler, 
+                this->shared_from_this(), 
+                std::placeholders::_1, 
+                std::placeholders::_2
+            )
         )
     );
 }
@@ -30,18 +34,22 @@ void Session::Send(std::string text) {
 void Session::Read() {
     auto mutableBuffer = m_streamBuffer.prepare(1024);
     m_socket.async_read_some(
-        mutableBuffer, 
-        std::bind(&Session::ReadSomeHandler, 
-            this->shared_from_this(), 
-            std::placeholders::_1, 
-            std::placeholders::_2
+        mutableBuffer,
+        asio::bind_executor(
+            m_strand, 
+            std::bind(&Session::ReadSomeHandler, 
+                this->shared_from_this(), 
+                std::placeholders::_1, 
+                std::placeholders::_2
+            )
         )
     );
 }
 
 void Session::Close() {
-    boost::system::error_code ec;
+    m_isClosed = true;
 
+    boost::system::error_code ec;
     m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     if(ec) {
 
@@ -51,16 +59,12 @@ void Session::Close() {
     m_socket.close(ec);
     if(ec) {
 
-    }
-
-    if(m_server) {
-        m_server->RemoveSession(this);
-    }
+    } 
 }
 
 void Session::ReadSomeHandler(
     const boost::system::error_code& error, 
-    std::size_t transferredBytes
+    size_t transferredBytes
 ) {
     if(!error) {
         std::cout << "Just recive: " << transferredBytes << " bytes.\n";
@@ -68,7 +72,8 @@ void Session::ReadSomeHandler(
         std::string recieved;
         recieved.resize(transferredBytes);
 
-        for(int i = 0; i < transferredBytes; i++) recieved[i] = p[i];
+        std::copy(p, p + transferredBytes, recieved.begin()); 
+        // for(int i = 0; i < transferredBytes; i++) recieved[i] = p[i];
 
         boost::system::error_code error; 
 
@@ -100,10 +105,13 @@ void Session::WriteSomeHandler(
             std::cout << " Trying to send: "<< m_buffer.size() - m_transferred << " bytes\n";
             m_socket.async_write_some(
                 asio::buffer(&m_buffer[m_transferred], m_buffer.size() - m_transferred), 
-                std::bind(&Session::WriteSomeHandler, 
-                    this->shared_from_this(), 
-                    std::placeholders::_1, 
-                    std::placeholders::_2
+                asio::bind_executor(
+                    m_strand,
+                    std::bind(&Session::WriteSomeHandler, 
+                        this->shared_from_this(), 
+                        std::placeholders::_1, 
+                        std::placeholders::_2
+                    )
                 )
             );
         }
@@ -114,13 +122,11 @@ void Session::WriteSomeHandler(
     else if(error == boost::asio::error::eof) {
         // Connection was closed by the remote peer
         std::cerr << error.message() << "\n";
-        m_isClosed = true;
         this->Close();
     }
     else {
         // Something went wrong
         std::cerr << error.message() << "\n";
-        m_isClosed = true;
         this->Close();
     }
 }
@@ -136,13 +142,15 @@ void Server::Start() {
     m_acceptor.set_option(
         asio::ip::tcp::acceptor::reuse_address(false)
     );
+
+    /// Q: Am I right to not use strand here?
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code msg; 
             std::cerr << "Accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
             
             std::stringstream ss;
-            ss << "Welcome to my server, user " << m_socket->remote_endpoint(msg);
+            ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg);
             std::string welcomeMessage = ss.rdbuf()->str();
 
             m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket), this));
@@ -153,29 +161,17 @@ void Server::Start() {
             this->Start();
         }
     });
-
-
 }
 
 void Server::Shutdown() {
     boost::system::error_code ec;
-    
-    m_socket->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    if(ec) {
-        std::cerr<< ec.message() << "\n";
-    }
-    ec.clear();
-    
-    m_socket->close(ec);
-    if(ec) {
-        std::cerr<< ec.message() << "\n";
-    }
-    ec.clear();
-
     m_acceptor.close(ec);
     if(ec) {
         std::cerr<< ec.message() << "\n";
     }
+
+    for(auto& s: m_sessions) s->Close();
+    m_sessions.clear();
 }
 
 void Server::RemoveSession(const Session * s) {
@@ -187,13 +183,29 @@ void Server::RemoveSession(const Session * s) {
     );
 }
 
-void Server::Broadcast(std::string text) {
+void Server::Broadcast(const std::string& text) {
+    // remove closed sessions
+     m_sessions.erase(
+        std::remove_if(m_sessions.begin(), m_sessions.end(), [](const auto& session){
+            return session->IsClosed();
+        }),
+        m_sessions.end()
+    );
+
     for(const auto& session: m_sessions) {
         session->Send(text);
     }
 }
 
-void Server::BroadcastEveryoneExcept(std::string text, const Session* exception) {
+void Server::BroadcastEveryoneExcept(const std::string& text, const Session* exception) {
+    // remove closed sessions
+     m_sessions.erase(
+        std::remove_if(m_sessions.begin(), m_sessions.end(), [](const auto& session){
+            return session->IsClosed();
+        }),
+        m_sessions.end()
+    );
+
     for(const auto& session: m_sessions) {
         if( exception != session.get()) {
             session->Send(text);

@@ -73,20 +73,25 @@ private:
     
     void WriteSomeHandler(
         const boost::system::error_code& error, 
-        std::size_t transferredBytes
+        size_t transferredBytes
     );
 
     void ReadSomeHandler(
         const boost::system::error_code& error, 
-        std::size_t transferredBytes
+        size_t transferredBytes
     );
 private:
+
     /**
      * It's a socket connected to the server. 
      */
     asio::ip::tcp::socket   m_socket;
 
+    /// TODO: remove server pointer. 
+    /// Session should communicate with server via protocol and preefined commands
     Server * const m_server { nullptr };
+
+    asio::io_context::strand m_strand;
     /**
      * A buffer used for outcoming information.
      */
@@ -112,13 +117,14 @@ public:
 
     void Shutdown();
 
-    void Broadcast(std::string text);
+    void Broadcast(const std::string& text);
     
-    void BroadcastEveryoneExcept(std::string text, const Session*);
+    void BroadcastEveryoneExcept(const std::string& text, const Session*);
 
     void RemoveSession(const Session * s);
 
 private:
+    friend class Session;
     /**
      * Context is being passed by a pointer because we don't need to know
      * where and how it's being run. We just ditch this responsibility to someone else.
