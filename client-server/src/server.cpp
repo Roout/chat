@@ -68,23 +68,22 @@ void Session::ReadSomeHandler(
 ) {
     if(!error) {
         std::cout << "Just recive: " << transferredBytes << " bytes.\n";
-        const char* p = asio::buffer_cast<const char*>(m_streamBuffer.data());
-        std::string recieved;
-        recieved.resize(transferredBytes);
-
-        std::copy(p, p + transferredBytes, recieved.begin()); 
-        // for(int i = 0; i < transferredBytes; i++) recieved[i] = p[i];
-
+        auto data { m_streamBuffer.data() }; // asio::streambuf::const_buffers_type
+        std::string recieved (
+            asio::buffers_begin(data), 
+            asio::buffers_begin(data) + transferredBytes
+        );
+        
         boost::system::error_code error; 
 
         std::stringstream ss;
         ss << m_socket.remote_endpoint(error) << ": " << recieved << '\n' ;
-        std::string data { ss.rdbuf()->str() };
+        std::string msg { ss.rdbuf()->str() };
 
         m_streamBuffer.consume(transferredBytes);
         
         if(m_server) {
-            asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, data, this));
+            asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this));
         }
         
         this->Read();
