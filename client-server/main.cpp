@@ -15,7 +15,7 @@ int main() {
 	int x; 
 	cin >> x;
 
-	if( x == 1) {
+	if( x == 1 ) {
 		Server server { io, 15001 };
 		server.Start();
 		vector<thread> ts;
@@ -31,7 +31,7 @@ int main() {
 		vector<thread> ts;
 		for(int i = 0; i < 2; i++) 
 			ts.emplace_back([io]() {
-				io->run();
+				io->run(); 
 			});
 		
 		cin.ignore();
@@ -42,7 +42,5 @@ int main() {
 			client.Write(std::move(str));
 		}
 	}
-	
-
 	return 0;
 }
