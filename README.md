@@ -14,9 +14,9 @@ Done:
 [x] broadcast recieved data to all clients
 [x] timely remove all connections that were closed
 
-TODO #1:
+TODO #1
 [ ] Add safe client disconnection
-[ ] Add safe client disconnection
+[ ] Add safe server disconnection
 [ ] Fix errors and add multithreading safety:
 
 [Good answer](https://stackoverflow.com/a/40588070/11468611)
@@ -36,12 +36,10 @@ TODO #1:
 [ ] different buffers to avoid race when writing/reading in the same direction/
     I need several buffers ( maybe look through scatter/gether IO idiom) when writing for the case
     when one handle hasn't yet sent all message but the situation force you to send another one.
-    It's important to have  
 
-
-TODO #2:
+TODO #2
 [ ] remove server pointer from the session
-[ ] reorganize work with buffers 
+[x] reorganize work with buffers 
 
 TODO #3
 [ ] make copy of the project and apply cooroutings!
