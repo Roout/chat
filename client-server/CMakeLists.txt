@@ -12,6 +12,7 @@ set ( header_files
   "include/server.hpp"
   "include/client.hpp"
   "include/helper.hpp"
+  "include/DoubleBuffer.hpp"
 )
 add_definitions(-D_WIN32_WINNT=0x0601)
 
