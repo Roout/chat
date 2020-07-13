@@ -15,6 +15,8 @@ Done:
 [x] timely remove all connections that were closed
 
 TODO #1:
+[ ] Add safe client disconnection
+[ ] Add safe client disconnection
 [ ] Fix errors and add multithreading safety:
 
 [Good answer](https://stackoverflow.com/a/40588070/11468611)
