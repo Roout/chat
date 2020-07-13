@@ -5,34 +5,50 @@
 #include <queue>
 #include <boost/asio.hpp>
 
-/**
- * !Both executed only in the thread where run() is called. [documentation]
- * 
- * Post - 	non-blocking call. Function can't be executed 
- * 			inside the function where it was posted.
- * 
- * Dispatch -  may block the function where it was dispatched.
- * 
- * The dispatch() function can be invoked from the current
- * worker thread, while the post() function has to wait until the handler of the worker is complete
- * before it can be invoked. In other words, the dispatch() function's events can be executed from the
- * current worker thread even if there are other pending events queued up, while the post() function's
- * events have to wait until the handler completes the execution before being allowed to be executed.
- * 
- * io_context::poll() - same as run() but execute only already READY handles => so no blocking used
- * 
- * io_context::run() - 	blocks execution (wait for and execute for handles that are NOT ready yet), i.e.
- *  					blocks until all work has finished.
- * 
- * strand - A strand is defined as a strictly sequential invocation of event handlers 
- *          (i.e. no concurrent invocation). Use of strands allows execution of code 
- *          in a multithreaded program without the need for explicit locking (e.g. using mutexes). 
- */
-
 namespace asio = boost::asio;
 
-
 class Server;
+
+class Buffers final {
+public:
+    Buffers(size_t reserved = 10) {
+        m_buffers[0].reserve(reserved);
+        m_buffers[1].reserve(reserved);
+        m_bufferSequence.reserve(reserved);
+    }
+
+    void Enque(std::string&& data) {
+        m_buffers[m_activeBuffer ^ 1].emplace_back(std::move(data));
+    }
+
+    void SwapBuffers() {
+        m_bufferSequence.clear();
+
+        m_buffers[m_activeBuffer].clear();
+        m_activeBuffer ^= 1;
+
+        for(const auto& buf: m_buffers[m_activeBuffer]) {
+            m_bufferSequence.emplace_back(asio::const_buffer(buf.c_str(), buf.size()));
+        }
+    }
+
+    size_t GetQueueSize() const noexcept {
+        return m_buffers[m_activeBuffer ^ 1].size();
+    } 
+
+    const std::vector<asio::const_buffer>& GetBufferSequence() const noexcept {
+        return m_bufferSequence;
+    }
+private:
+    /// TODO: introduce new class double buffer or look for it in boost.
+    using DoubleBuffer = std::array<std::vector<std::string>, 2>;
+    
+    DoubleBuffer m_buffers;
+
+    std::vector<asio::const_buffer> m_bufferSequence;
+    
+    size_t m_activeBuffer { 0 };
+};
 
 /// TODO: Prevent several async_write/read in/from one direction!
 ///
@@ -50,9 +66,6 @@ public:
 
     /**
      * Send @text to remote connection 
-     * ASSUME 
-     *  - that size(text) <= size(m_buffer)
-     *  - send message only once
      */
     void Send(std::string text);
 
@@ -80,32 +93,31 @@ private:
         const boost::system::error_code& error, 
         size_t transferredBytes
     );
+
+    void Send();
 private:
 
     /**
      * It's a socket connected to the server. 
      */
-    asio::ip::tcp::socket   m_socket;
+    asio::ip::tcp::socket m_socket;
 
     /// TODO: remove server pointer. 
     /// Session should communicate with server via protocol and preefined commands
     Server * const m_server { nullptr };
 
     asio::io_context::strand m_strand;
-    /**
-     * A buffer used for outcoming information.
-     */
-    std::string m_buffer;
+
+    Buffers m_outbox;
+
     /**
      * A buffer used for incoming information.
      */
-    asio::streambuf m_streamBuffer;
-    /**
-     * Already transferred bytes 
-     */
-    size_t m_transferred { 0 };
+    asio::streambuf m_inbox;
 
     bool m_isClosed { false };
+
+    bool m_isWriting { false };
 };
 
 class Server final {
@@ -119,7 +131,7 @@ public:
 
     void Broadcast(const std::string& text);
     
-    void BroadcastEveryoneExcept(const std::string& text, const Session*);
+    void BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<const Session>);
 
     void RemoveSession(const Session * s);
 

@@ -17,9 +17,22 @@ Session::Session(
 }
 
 void Session::Send(std::string text) {
-    m_buffer = std::move(text);
-    m_socket.async_write_some(
-        asio::buffer(m_buffer), 
+    // TODO: add mutex
+    m_outbox.Enque(std::move(text));
+    if( !m_isWriting ) {
+        this->Send();
+    }
+}
+
+void Session::Send() {
+    // add all text that is queued for write operation to active buffer
+    m_outbox.SwapBuffers();
+    // initiate write operation
+    m_isWriting = true;
+
+    asio::async_write(
+        m_socket,
+        m_outbox.GetBufferSequence(),
         asio::bind_executor(
             m_strand,
             std::bind(&Session::WriteSomeHandler, 
@@ -32,7 +45,7 @@ void Session::Send(std::string text) {
 }
 
 void Session::Read() {
-    auto mutableBuffer = m_streamBuffer.prepare(1024);
+    auto mutableBuffer = m_inbox.prepare(1024);
     m_socket.async_read_some(
         mutableBuffer,
         asio::bind_executor(
@@ -68,11 +81,14 @@ void Session::ReadSomeHandler(
 ) {
     if(!error) {
         std::cout << "Just recive: " << transferredBytes << " bytes.\n";
-        auto data { m_streamBuffer.data() }; // asio::streambuf::const_buffers_type
-        std::string recieved (
+        
+        m_inbox.commit(transferredBytes);
+        
+        const auto data { m_inbox.data() }; // asio::streambuf::const_buffers_type
+        std::string recieved {
             asio::buffers_begin(data), 
             asio::buffers_begin(data) + transferredBytes
-        );
+        };
         
         boost::system::error_code error; 
 
@@ -80,13 +96,16 @@ void Session::ReadSomeHandler(
         ss << m_socket.remote_endpoint(error) << ": " << recieved << '\n' ;
         std::string msg { ss.rdbuf()->str() };
 
-        m_streamBuffer.consume(transferredBytes);
+        m_inbox.consume(transferredBytes);
         
         if(m_server) {
-            asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this));
+            asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
         }
         
         this->Read();
+    } 
+    else {
+        std::cerr << error.message() << "\n";
     }
 }
 
@@ -95,36 +114,19 @@ void Session::WriteSomeHandler(
     std::size_t transferredBytes
 ) {
     if(!error) {
-        std::cout << "Just sent: " << transferredBytes << " bytes\n";
-        m_transferred += transferredBytes;
-        std::cout << "Already sent: " << m_transferred << " bytes\n";
+        std::cout << "Sent: " << transferredBytes << " bytes\n";
 
-        if(m_transferred < m_buffer.size() ) {
+        if( m_outbox.GetQueueSize() ) {
             // we need to send other data
-            std::cout << " Trying to send: "<< m_buffer.size() - m_transferred << " bytes\n";
-            m_socket.async_write_some(
-                asio::buffer(&m_buffer[m_transferred], m_buffer.size() - m_transferred), 
-                asio::bind_executor(
-                    m_strand,
-                    std::bind(&Session::WriteSomeHandler, 
-                        this->shared_from_this(), 
-                        std::placeholders::_1, 
-                        std::placeholders::_2
-                    )
-                )
-            );
-        }
-        else if( m_transferred == m_buffer.size()) {
-            m_transferred = 0;
+            std::cout << "Need to send " << m_outbox.GetQueueSize() << " messages.\n";
+            this->Send();
+        } else {
+            m_isWriting = false;
         }
     } 
-    else if(error == boost::asio::error::eof) {
-        // Connection was closed by the remote peer
-        std::cerr << error.message() << "\n";
-        this->Close();
-    }
-    else {
-        // Something went wrong
+    else /* if(error == boost::asio::error::eof) */ {
+        // Connection was closed by the remote peer 
+        // or any other error happened 
         std::cerr << error.message() << "\n";
         this->Close();
     }
@@ -196,7 +198,7 @@ void Server::Broadcast(const std::string& text) {
     }
 }
 
-void Server::BroadcastEveryoneExcept(const std::string& text, const Session* exception) {
+void Server::BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<const Session> exception) {
     // remove closed sessions
      m_sessions.erase(
         std::remove_if(m_sessions.begin(), m_sessions.end(), [](const auto& session){
@@ -206,7 +208,7 @@ void Server::BroadcastEveryoneExcept(const std::string& text, const Session* exc
     );
 
     for(const auto& session: m_sessions) {
-        if( exception != session.get()) {
+        if( exception.get() != session.get()) {
             session->Send(text);
         }
     }
