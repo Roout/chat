@@ -30,19 +30,10 @@ void Client::Connect(const std::string& path, std::uint16_t port) {
 }
 
 void Client::Write(std::string && text ) {
-    m_isWriting = true;
-    m_outcomingBuffer = std::move(text);
-    m_socket.async_write_some(
-        asio::buffer(m_outcomingBuffer),
-        asio::bind_executor(
-            m_strand,
-            std::bind(&Client::OnWrite, 
-                this, 
-                std::placeholders::_1, 
-                std::placeholders::_2
-            )
-        )
-    );
+    m_outbox.Enque(std::move(text));
+    if(!m_isWriting) {
+        this->Write();
+    } 
 }
 
 void Client::Close() {
@@ -72,9 +63,9 @@ void Client::OnConnect(const boost::system::error_code& err) {
 
 void Client::Read() {
     std::cout << "Start reading!\n";
-    m_incomingBuffer.resize(1024);
+    m_inbox.resize(1024);
     m_socket.async_read_some(
-        asio::buffer(m_incomingBuffer),
+        asio::buffer(m_inbox),
         asio::bind_executor(
             m_strand,
             std::bind(&Client::OnRead, this, std::placeholders::_1, std::placeholders::_2)
@@ -91,8 +82,8 @@ void Client::OnRead(
     size_t transferredBytes
 ) {
     if(transferredBytes) {
-        std::string_view sv(m_incomingBuffer);
-        const auto suffixSize { static_cast<int>(m_incomingBuffer.size()) - transferredBytes };
+        std::string_view sv(m_inbox);
+        const auto suffixSize { static_cast<int>(m_inbox.size()) - transferredBytes };
         sv.remove_suffix(suffixSize);
         std::cout << m_socket.remote_endpoint() << ": "<< sv << '\n'; 
     }
@@ -122,23 +113,34 @@ void Client::OnWrite(
 
     if( !error ){
         std::cout << "Just sent: " << transferredBytes << " bytes\n";
-        m_transferred += transferredBytes;
-        std::cout << "Already sent: " << m_transferred << " bytes\n";
         
-        if(m_transferred < m_outcomingBuffer.size() ) {
+        if(m_outbox.GetQueueSize()) {
             // we need to send other data
-            std::cout << " Trying to send: "<< m_outcomingBuffer.size() - m_transferred << " bytes\n";
-            m_socket.async_write_some(
-                asio::buffer(&m_outcomingBuffer[m_transferred], m_outcomingBuffer.size() - m_transferred), 
-                asio::bind_executor(m_strand, std::bind(&Client::OnWrite, this, _1, _2))
-            );
-        }
-        else if( m_transferred == m_outcomingBuffer.size()) {
-            m_transferred = 0;
+            this->Write();
+        } else {
             m_isWriting = false;
         }
     }
     else {
         m_isWriting = false;
+        std::cerr << "Error on writting error: " << error.message() << '\n';
+        this->Close();
     }
+}
+
+void Client::Write() {
+    m_isWriting = true;
+    m_outbox.SwapBuffers();
+    asio::async_write(
+        m_socket,
+        m_outbox.GetBufferSequence(),
+        asio::bind_executor(
+            m_strand,
+            std::bind(&Client::OnWrite, 
+                this, 
+                std::placeholders::_1, 
+                std::placeholders::_2
+            )
+        )
+    );
 }

@@ -3,6 +3,8 @@
 #include <string>
 #include <boost/asio.hpp>
 
+#include "DoubleBuffer.hpp"
+
 namespace asio = boost::asio;
 
 class Client final {
@@ -24,6 +26,7 @@ private:
 
     void Read();
 
+    void Write();
     /**
      * Completion handle. 
      * Called when the client read something from the remote endpoint
@@ -48,7 +51,6 @@ private:
     asio::ip::tcp::socket               m_socket;
     
     bool            m_isWriting { false };
-    std::string     m_incomingBuffer;
-    std::string     m_outcomingBuffer;
-    size_t          m_transferred { 0 };
+    std::string     m_inbox;
+    Buffers         m_outbox;
 };

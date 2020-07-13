@@ -25,9 +25,9 @@ public:
     };
 
     /**
-     * Send @text to remote connection 
+     * Write @text to remote connection 
      */
-    void Send(std::string text);
+    void Write(std::string text);
 
     /**
      * Read @text from the remote connection
@@ -54,7 +54,7 @@ private:
         size_t transferredBytes
     );
 
-    void Send();
+    void Write();
 private:
 
     /**

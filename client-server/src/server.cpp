@@ -16,15 +16,15 @@ Session::Session(
 {
 }
 
-void Session::Send(std::string text) {
+void Session::Write(std::string text) {
     // TODO: add mutex
     m_outbox.Enque(std::move(text));
     if( !m_isWriting ) {
-        this->Send();
+        this->Write();
     }
 }
 
-void Session::Send() {
+void Session::Write() {
     // add all text that is queued for write operation to active buffer
     m_outbox.SwapBuffers();
     // initiate write operation
@@ -117,9 +117,9 @@ void Session::WriteSomeHandler(
         std::cout << "Sent: " << transferredBytes << " bytes\n";
 
         if( m_outbox.GetQueueSize() ) {
-            // we need to send other data
-            std::cout << "Need to send " << m_outbox.GetQueueSize() << " messages.\n";
-            this->Send();
+            // we need to Write other data
+            std::cout << "Need to Write " << m_outbox.GetQueueSize() << " messages.\n";
+            this->Write();
         } else {
             m_isWriting = false;
         }
@@ -156,7 +156,7 @@ void Server::Start() {
 
             m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket), this));
             // welcome new user
-            m_sessions.back()->Send(welcomeMessage);
+            m_sessions.back()->Write(welcomeMessage);
             m_sessions.back()->Read();
             // wait for the new connections again
             this->Start();
@@ -194,7 +194,7 @@ void Server::Broadcast(const std::string& text) {
     );
 
     for(const auto& session: m_sessions) {
-        session->Send(text);
+        session->Write(text);
     }
 }
 
@@ -209,7 +209,7 @@ void Server::BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<co
 
     for(const auto& session: m_sessions) {
         if( exception.get() != session.get()) {
-            session->Send(text);
+            session->Write(text);
         }
     }
 }
