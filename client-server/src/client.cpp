@@ -6,7 +6,7 @@
 Client::Client(std::shared_ptr<asio::io_context> io):
     m_io { io },
     m_strand { *io },
-    m_socket{ *m_io }
+    m_socket { *m_io }
 {
 }
 
@@ -30,10 +30,15 @@ void Client::Connect(const std::string& path, std::uint16_t port) {
 }
 
 void Client::Write(std::string && text ) {
-    m_outbox.Enque(std::move(text));
-    if(!m_isWriting) {
-        this->Write();
-    } 
+    // using strand we prevent concurrent access to variables and 
+    // concurrent writing to socket. 
+    /// TODO: make sure that pointer @this is valid.
+    asio::post(m_strand, [text = std::move(text), this]() mutable {
+        m_outbox.Enque(std::move(text));
+        if(!m_isWriting) {
+            this->Write();
+        } 
+    });
 }
 
 void Client::Close() {
@@ -53,7 +58,7 @@ void Client::Close() {
 void Client::OnConnect(const boost::system::error_code& err) {
     if(err) {
         std::cerr << err.message() << "\n";
-    }
+    } 
     else {
         std::cerr << "Connected successfully!\n";
         // start waiting incoming calls
@@ -73,10 +78,6 @@ void Client::Read() {
     );
 }
 
-/**
- * Completion handle. 
- * Called when the client read something from the remote endpoint
- */
 void Client::OnRead(
     const boost::system::error_code& error, 
     size_t transferredBytes
@@ -91,36 +92,32 @@ void Client::OnRead(
     if( !error ) {
         this->Read();
     } 
-    // else if( error == boost::asio::error::eof) {
-    //     // peer has closed this connection
-    //     // handle all recieved data
-    //     this->Close();
-    // } 
-    else {
+    else /*if( error == boost::asio::error::eof) */ {
         std::cerr << error.message() << "\n";
+        /// TODO: Is it safe to close already closed socket
         this->Close();
     }
 }
 
-/**
- * Completion handle; called when the client write something to the remote endpoint
- */
 void Client::OnWrite(
     const boost::system::error_code& error, 
     size_t transferredBytes
 ) {
     using namespace std::placeholders;
 
-    if( !error ){
+    if( !error ) {
         std::cout << "Just sent: " << transferredBytes << " bytes\n";
-        
+
         if(m_outbox.GetQueueSize()) {
             // we need to send other data
-            this->Write();
-        } else {
+            asio::post(m_strand, [this](){
+                this->Write();
+            });
+        } 
+        else {
             m_isWriting = false;
         }
-    }
+    } 
     else {
         m_isWriting = false;
         std::cerr << "Error on writting error: " << error.message() << '\n';

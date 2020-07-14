@@ -33,9 +33,17 @@ TODO #1
          However It still won't solve fully problem with buffers if OnWrite can't send 
          all message at once!
 
-[ ] different buffers to avoid race when writing/reading in the same direction/
-    I need several buffers ( maybe look through scatter/gether IO idiom) when writing for the case
-    when one handle hasn't yet sent all message but the situation force you to send another one.
+[x] wrap Client::Write(text) function by strand to avoid data race.
+[ ] wrap Session::Write(text) function by strand to avoid data race.
+
+**Description:**   
+Let client write some data to server in thread A while in thread B this client recieve message, read it, and send a reply from the async_read_some complection handler! => possible 2 async_write are executed concurrently.
+
+**Solution:**  
+For now I solved (at least I think so) this problem using strand^ I wrapped the write function in strand so that 
+neither buffer/isWriting variables neither async_write_some operation aren't used\executed concurrently.
+
+I think I need to use other strand for reading operation as it can be used concurrently with writing operation.
 
 TODO #2
 [ ] remove server pointer from the session

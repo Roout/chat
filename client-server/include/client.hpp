@@ -2,7 +2,6 @@
 #include <memory>
 #include <string>
 #include <boost/asio.hpp>
-
 #include "DoubleBuffer.hpp"
 
 namespace asio = boost::asio;
@@ -25,8 +24,14 @@ private:
     void OnConnect(const boost::system::error_code& err);
 
     void Read();
-
+    
+    /**
+     * Send everything from the passive buffers to remote peer.  
+     * It is called from the function wrapped in strand to prevent concurrent 
+     * access to outgoing buffer and other variables. 
+     */
     void Write();
+
     /**
      * Completion handle. 
      * Called when the client read something from the remote endpoint
