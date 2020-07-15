@@ -30,7 +30,10 @@ public:
     void Write(std::string text);
 
     /**
-     * Read @text from the remote connection
+     * Read data from the remote connection.
+     * At first invoked on accept completion handler and then only
+     * on read completion handler. This prevent concurrent execution of read
+     * operation on socket.
      */
     void Read();
 

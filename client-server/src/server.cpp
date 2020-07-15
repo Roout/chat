@@ -17,11 +17,12 @@ Session::Session(
 }
 
 void Session::Write(std::string text) {
-    // TODO: add mutex
-    m_outbox.Enque(std::move(text));
-    if( !m_isWriting ) {
-        this->Write();
-    }
+    asio::post(m_strand, [text = std::move(text), self = shared_from_this()]() mutable {
+        self->m_outbox.Enque(std::move(text));
+        if( !self->m_isWriting ) {
+            self->Write();
+        }
+    });
 }
 
 void Session::Write() {
@@ -98,9 +99,7 @@ void Session::ReadSomeHandler(
 
         m_inbox.consume(transferredBytes);
         
-        if(m_server) {
-            asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
-        }
+        asio::post(std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
         
         this->Read();
     } 
@@ -119,7 +118,9 @@ void Session::WriteSomeHandler(
         if( m_outbox.GetQueueSize() ) {
             // we need to Write other data
             std::cout << "Need to Write " << m_outbox.GetQueueSize() << " messages.\n";
-            this->Write();
+            asio::post(m_strand, [self = shared_from_this()](){
+                self->Write();
+            }); 
         } else {
             m_isWriting = false;
         }
@@ -144,7 +145,8 @@ void Server::Start() {
         asio::ip::tcp::acceptor::reuse_address(false)
     );
 
-    /// Q: Am I right to not use strand here?
+    /// Q: Am I right to not use strand here? 
+    /// As far as I can see I need strand here for ostream object safety...
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code msg; 
