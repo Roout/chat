@@ -17,7 +17,10 @@ Done:
 TODO #1
 [ ] Add safe client disconnection
 [ ] Add safe server disconnection
-[ ] Fix errors and add multithreading safety:
+Safe disconnection should be achieved by catching exception from io_context so
+it need to be wrapped in try-catch block.
+
+[x] Fix errors and add multithreading safety:
 
 [Good answer](https://stackoverflow.com/a/40588070/11468611)
 1. Concurrent execution of functions that access the same socket.
@@ -34,7 +37,7 @@ TODO #1
          all message at once!
 
 [x] wrap Client::Write(text) function by strand to avoid data race.
-[ ] wrap Session::Write(text) function by strand to avoid data race.
+[x] wrap Session::Write(text) function by strand to avoid data race.
 
 **Description:**   
 Let client write some data to server in thread A while in thread B this client recieve message, read it, and send a reply from the async_read_some complection handler! => possible 2 async_write are executed concurrently.
@@ -47,6 +50,7 @@ I think I need to use other strand for reading operation as it can be used concu
 
 TODO #2
 [ ] remove server pointer from the session
+Will be achieved when I define communication protocol: request(client)-reply(server) and message structure.
 [x] reorganize work with buffers 
 
 TODO #3
