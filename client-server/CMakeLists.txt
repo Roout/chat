@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set ( sources_files 
   "src/server.cpp"
   "src/client.cpp"
+  "src/DoubleBuffer.cpp"
   "main.cpp"
 )
 set ( header_files
