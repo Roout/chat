@@ -7,6 +7,7 @@ set ( sources_files
   "src/server.cpp"
   "src/client.cpp"
   "src/DoubleBuffer.cpp"
+  "src/Request.cpp"
   "main.cpp"
 )
 set ( header_files
@@ -14,8 +15,13 @@ set ( header_files
   "include/client.hpp"
   "include/helper.hpp"
   "include/DoubleBuffer.hpp"
+  "include/RequestType.hpp"
+  "include/Request.hpp"
+  "include/Utility.hpp"
 )
 add_definitions(-D_WIN32_WINNT=0x0601)
+
+add_library(${This}_lib STATIC ${sources_files} ${header_files})
 
 add_executable (${This} ${sources_files} ${header_files})
 
@@ -41,5 +47,14 @@ if(Boost_FOUND)
     PUBLIC ${Boost_INCLUDE_DIR} 
     PUBLIC include
   )
+  target_include_directories(${This}_lib 
+    PUBLIC ${Boost_INCLUDE_DIRS} 
+    PUBLIC ${Boost_INCLUDE_DIR} 
+    PUBLIC include
+  )
+
   target_link_libraries(${This} PUBLIC ${Boost_LIBRARIES})
+
+  target_link_libraries(${This}_lib PUBLIC ${Boost_LIBRARIES})
+
 endif()
