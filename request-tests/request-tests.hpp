@@ -146,6 +146,19 @@ TEST(Request, ParseChatMessageRequest) {
     ASSERT_EQ(request.GetBody(), std::string{""});
 }
 
-TEST(Request, ParseUndefinedRequest) {
-    ASSERT_TRUE(true);
+TEST(Request, SerializeRequest) {
+    Requests::Request request;
+    // form test
+    const std::string frame = 
+        std::to_string(Util::EnumCast(Requests::RequestType::ABOUT_CHATROOM)) // command
+        + Requests::DELIMETER + "134"       // chatroom id
+        + Requests::DELIMETER + "Roster557" // unique username
+        + Requests::DELIMETER + "6:some other info"   // body
+        + Requests::REQUEST_DELIMETER; 
+    // parse
+    request.Parse(frame);
+
+    const auto serialized { request.Serialize() };
+
+    ASSERT_EQ(serialized, frame);
 }
