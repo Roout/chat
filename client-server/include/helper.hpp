@@ -8,6 +8,6 @@ namespace helper
 	template<typename ...Args>
 	void Write(std::mutex& m, Args&&... args) {
 		std::lock_guard<std::mutex> guard(m);
-		(std::cerr<<...<<std::forward<Args>(args)) << std::endl;
+		(std::cerr<<...<<std::forward<Args>(args)) << '\n';
 	}
 }
