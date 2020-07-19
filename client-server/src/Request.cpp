@@ -27,7 +27,9 @@ namespace Requests {
         std::string m_body {};
     };
 
-    Request::Request() = default;
+    Request::Request() : 
+        m_impl{ std::make_unique<Impl>() }
+    {};
         
     Request::~Request() = default;
 
@@ -56,7 +58,8 @@ namespace Requests {
         m_impl->m_name = frame.substr(start, end - start);
         // body
         start = end + skip;
-        m_impl->m_body = frame.substr(start, frame.size() - REQUEST_DELIMETER.size());
+        end = frame.size() - REQUEST_DELIMETER.size();
+        m_impl->m_body = frame.substr(start, end - start);
     }
 
     std::string Request::Serialize() const {
@@ -77,7 +80,7 @@ namespace Requests {
         m_impl->m_type = type;
     }
 
-    void Request::SetChat(size_t chatroomId) {
+    void Request::SetChatroom(size_t chatroomId) {
         m_impl->m_chatroomId = chatroomId;
     }
 
@@ -87,5 +90,21 @@ namespace Requests {
 
     void Request::SetBody(const std::string& body) {
         m_impl->m_body = body;
+    }
+
+    RequestType Request::GetType() const noexcept {
+        return m_impl->m_type;
+    }
+
+    size_t Request::GetChatroom() const noexcept {
+        return m_impl->m_chatroomId;
+    }
+
+    const std::string& Request::GetName() const noexcept {
+        return m_impl->m_name;
+    }
+
+    const std::string& Request::GetBody() const noexcept {
+        return m_impl->m_body;
     }
 }

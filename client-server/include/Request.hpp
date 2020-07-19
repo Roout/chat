@@ -41,12 +41,19 @@ namespace Requests {
 
         void SetType(RequestType type);
 
-        void SetChat(size_t chatroomId);
+        void SetChatroom(size_t chatroomId);
 
         void SetName(const std::string& name);
 
         void SetBody(const std::string& body);
 
+        RequestType GetType() const noexcept;
+
+        size_t GetChatroom() const noexcept;
+
+        const std::string& GetName() const noexcept;
+
+        const std::string& GetBody() const noexcept;
     private:
         /**
          * This is struct which hide implementation details. 
