@@ -10,8 +10,6 @@ namespace asio = boost::asio;
 
 class Server;
 
-/// TODO: Prevent several async_write/read in/from one direction!
-///
 class Session final : public std::enable_shared_from_this<Session> {
 public:
     
