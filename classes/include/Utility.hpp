@@ -1,7 +1,6 @@
 #ifndef LOCAL_UTILITY_HPP
 #define LOCAL_UTILITY_HPP
 
-
 namespace Util {
     /**
      * Work with enumerations: 

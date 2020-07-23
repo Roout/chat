@@ -1,29 +1,35 @@
 ﻿cmake_minimum_required (VERSION 3.16)
 
-set(This client-server)
+set(This client)
 set(CMAKE_CXX_STANDARD 17)
 
 set ( sources_files 
-  "src/server.cpp"
   "src/client.cpp"
-  "src/DoubleBuffer.cpp"
-  "src/Request.cpp"
+  "../classes/src/DoubleBuffer.cpp"
+  "../classes/src/Request.cpp"
   "main.cpp"
 )
 set ( header_files
-  "include/server.hpp"
   "include/client.hpp"
-  "include/helper.hpp"
-  "include/DoubleBuffer.hpp"
-  "include/RequestType.hpp"
-  "include/Request.hpp"
-  "include/Utility.hpp"
+  "../classes/include/DoubleBuffer.hpp"
+  "../classes/include/RequestType.hpp"
+  "../classes/include/Request.hpp"
+  "../classes/include/Utility.hpp"
 )
 add_definitions(-D_WIN32_WINNT=0x0601)
 
 add_library(${This}_lib STATIC ${sources_files} ${header_files})
 
 add_executable (${This} ${sources_files} ${header_files})
+
+target_include_directories(${This} 
+  PUBLIC "../classes/include"
+)
+
+target_include_directories(${This}_lib 
+  PUBLIC "../classes/include"
+)
+
 
 # disable autolinking in boost
 # avoid LNK1104 libboost_system i.e. on Windows: http://stackoverflow.com/a/28902261/122441

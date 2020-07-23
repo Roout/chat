@@ -1,4 +1,4 @@
-#include "DoubleBuffer.hpp"
+#include "../include/DoubleBuffer.hpp"
 
 Buffers::Buffers(size_t reserved ) {
     m_buffers[0].reserve(reserved);

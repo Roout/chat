@@ -1,6 +1,6 @@
-#include "Request.hpp"
-#include "RequestType.hpp"
-#include "Utility.hpp"
+#include "../include/Request.hpp"
+#include "../include/RequestType.hpp"
+#include "../include/Utility.hpp"
 #include <string>
 
 namespace Requests {
