@@ -5,12 +5,14 @@ set(CMAKE_CXX_STANDARD 17)
 
 set ( sources_files 
   "src/server.cpp"
+  "src/Session.cpp"
   "../classes/src/DoubleBuffer.cpp"
   "../classes/src/Request.cpp"
   "main.cpp"
 )
 set ( header_files
   "include/server.hpp"
+  "include/Session.hpp"
   "../classes/include/DoubleBuffer.hpp"
   "../classes/include/RequestType.hpp"
   "../classes/include/Request.hpp"
