@@ -59,9 +59,20 @@ private:
 private:
 
     enum class State {
+        /**
+         * In this state session will only wait for AUTHORIZE request.
+         * Any other requests will be ignored.
+         */
         ACCEPTED,
+        /**
+         * In this state session expects any request except CHAT_MESSAGE and AUTHORIZE.
+         * The user is already authorized and have access to several functions.
+         */
         AUTHORIZED,
-        BUZY // in chatroom
+        /**
+         *  In this state user is busy chatting in the chatroom
+         */
+        BUSY
     };
 
     /// data members

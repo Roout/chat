@@ -18,14 +18,15 @@ void Server::Start() {
     );
 
     /// Q: Am I right to not use strand here? 
-    /// As far as I can see I need strand here for ostream object safety...
+    /// A: As far as I can see I need strand here for ostream object safety...
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code msg; 
             std::cerr << "Accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
             
             std::stringstream ss;
-            ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg);
+            ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg) << '\n';
+            ss << "Please, login!";
             std::string welcomeMessage = ss.rdbuf()->str();
 
             m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket), this));
