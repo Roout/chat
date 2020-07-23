@@ -16,10 +16,12 @@ namespace Requests {
         CREATE_CHATROOM,
         LIST_CHATROOM,
         // server
-        JOIN_SERVER,
-        LEAVE_SERVER,
+        AUTHORIZE,
+        POST,
         // chat
-        CHAT_MESSAGE
+        CHAT_MESSAGE,
+
+        COUNT
     };
 }
 

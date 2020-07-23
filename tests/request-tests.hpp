@@ -92,47 +92,47 @@ TEST(Request, ParseListChatroomRequest) {
     ASSERT_EQ(request.GetBody(), std::string{""});
 }
 
-TEST(Request, ParseJoinServerRequest) {
+TEST(Request, ParseAuthorizeRequest) {
     Requests::Request request;
     // form test
     const std::string frame = 
-        std::to_string(Util::EnumCast(Requests::RequestType::JOIN_SERVER)) // command
+        std::to_string(Util::EnumCast(Requests::RequestType::AUTHORIZE)) // command
         + Requests::DELIMETER + "0"       // chatroom id
         + Requests::DELIMETER + "Roster557" // unique username
-        + Requests::DELIMETER + ""   // body
+        + Requests::DELIMETER + ""   // body; 
         + Requests::REQUEST_DELIMETER; 
     // parse
     request.Parse(frame);
     // check
-    ASSERT_EQ(request.GetType(), Requests::RequestType::JOIN_SERVER);
+    ASSERT_EQ(request.GetType(), Requests::RequestType::AUTHORIZE);
     ASSERT_EQ(request.GetChatroom(), 0);
     ASSERT_EQ(request.GetName(), std::string{"Roster557"});
     ASSERT_EQ(request.GetBody(), std::string{""});
 }
 
-TEST(Request, ParseLeaveServerRequest) {
+TEST(Request, ParsePostRequest) {
     Requests::Request request;
     // form test
     const std::string frame = 
-        std::to_string(Util::EnumCast(Requests::RequestType::LEAVE_SERVER)) // command
-        + Requests::DELIMETER + "0"       // chatroom id
-        + Requests::DELIMETER + "Roster557" // unique username
-        + Requests::DELIMETER + ""   // body
+        std::to_string(Util::EnumCast(Requests::RequestType::POST)) // command
+        + Requests::DELIMETER + "0" // chatroom id
+        + Requests::DELIMETER + ""  // unique username
+        + Requests::DELIMETER + "#1 Friends from Bruklin\n#2 Friends from Tokio"  // body; 
         + Requests::REQUEST_DELIMETER; 
     // parse
     request.Parse(frame);
     // check
-    ASSERT_EQ(request.GetType(), Requests::RequestType::LEAVE_SERVER);
+    ASSERT_EQ(request.GetType(), Requests::RequestType::POST);
     ASSERT_EQ(request.GetChatroom(), 0);
-    ASSERT_EQ(request.GetName(), std::string{"Roster557"});
-    ASSERT_EQ(request.GetBody(), std::string{""});
+    ASSERT_EQ(request.GetName(), std::string{""});
+    ASSERT_EQ(request.GetBody(), std::string{"#1 Friends from Bruklin\n#2 Friends from Tokio"});
 }
 
 TEST(Request, ParseChatMessageRequest) {
     Requests::Request request;
     // form test
     const std::string frame = 
-        std::to_string(Util::EnumCast(Requests::RequestType::LEAVE_SERVER)) // command
+        std::to_string(Util::EnumCast(Requests::RequestType::CHAT_MESSAGE)) // command
         + Requests::DELIMETER + "0"       // chatroom id
         + Requests::DELIMETER + "Roster557" // unique username
         + Requests::DELIMETER + ""   // body
@@ -140,7 +140,7 @@ TEST(Request, ParseChatMessageRequest) {
     // parse
     request.Parse(frame);
     // check
-    ASSERT_EQ(request.GetType(), Requests::RequestType::LEAVE_SERVER);
+    ASSERT_EQ(request.GetType(), Requests::RequestType::CHAT_MESSAGE);
     ASSERT_EQ(request.GetChatroom(), 0);
     ASSERT_EQ(request.GetName(), std::string{"Roster557"});
     ASSERT_EQ(request.GetBody(), std::string{""});
