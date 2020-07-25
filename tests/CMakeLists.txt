@@ -9,6 +9,7 @@ set(sources_files
 )
 set(header_files
   "request-tests.hpp"
+  "session-tests.hpp"
 )
 
 enable_testing()
@@ -17,9 +18,11 @@ add_executable(${This} ${sources_files} ${header_files})
 
 target_include_directories(${This} 
     PUBLIC "../classes/include"
-    PUBLIC "../server/include"
-    PUBLIC "../client/include"
+    PUBLIC "../server"
+    PUBLIC "../client"
 )
+
+add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
 
 target_link_libraries(${This} PUBLIC
     gtest_main
