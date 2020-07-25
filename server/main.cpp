@@ -3,7 +3,7 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <vector>
-#include "server.hpp"
+#include "Server.hpp"
 using namespace std;
 
 int main() {
@@ -14,11 +14,23 @@ int main() {
 	Server server { io, 15001 };
 	server.Start();
 	vector<thread> ts;
-	for(int i = 0; i < 2; i++) 
+	for(int i = 0; i < 2; i++) {
 		ts.emplace_back([io]() {
-				io->run();
+			for (;;) {
+				try {
+					io->run();
+					break; // run() exited normally
+				}
+				catch (...) {
+					// Deal with exception as appropriate.
+				}
+			}
 		});
-	io->run();
+	}
+	
+	for(auto& t: ts) {
+		t.join();
+	}
 	
 	return 0;
 }
