@@ -40,26 +40,38 @@ namespace Requests {
         m_impl->m_body.clear();
     }
 
-    void Request::Parse(const std::string& frame) {
+    int Request::Parse(const std::string& frame) {
         size_t start { 0 }, end { 0 };
         const size_t skip { DELIMETER.size() };
         // type
         end = frame.find_first_of(DELIMETER);
+        if( end == std::string::npos) {
+            return 1;
+        }
         const auto type { frame.substr(start, end - start) };
-        m_impl->m_type = Util::EnumCast<RequestType>(std::stoi(type));
+        m_impl->m_type = Utils::EnumCast<RequestType>(std::stoi(type));
         // room id
         start = end + skip;
         end = frame.find_first_of(DELIMETER, start);
+        if( end == std::string::npos) {
+            return 2;
+        }
         const auto room { frame.substr(start, end - start) };
         m_impl->m_chatroomId = std::stoi(room);
         // username
         start = end + skip;
         end = frame.find_first_of(DELIMETER, start);
+        if( end == std::string::npos) {
+            return 3;
+        }
         m_impl->m_name = frame.substr(start, end - start);
-        // body
+        // body 
+        // TODO: add check for request delimeter and return code (4) 
         start = end + skip;
         end = frame.size() - REQUEST_DELIMETER.size();
         m_impl->m_body = frame.substr(start, end - start);
+
+        return 0;
     }
 
     std::string Request::Serialize() const {

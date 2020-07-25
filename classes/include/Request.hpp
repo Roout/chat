@@ -11,9 +11,9 @@ namespace Requests {
      * Sequence used to divide important parts of the request (see Request::Impl)
      * during serialization.
      */
-    static const std::string DELIMETER { "\n\n" };
+    inline const std::string DELIMETER { "\n\n" };
 
-    static const std::string REQUEST_DELIMETER { "\n\r\n\r" };
+    inline const std::string REQUEST_DELIMETER { "\n\r\n\r" };
 
     class Request {
     public:
@@ -25,12 +25,18 @@ namespace Requests {
         void Reset();
 
         /**
+         * TODO: this function need refactoring: std::stoi throws!
+         * 
          * Parse @request string and initialize @m_impl.
          * 
          * @param frame
          *      Full one request which is not parsed yet.
+         * 
+         * @return error code 
+         *      On success: 0
+         *      on error: number > 0 which indicates on which step parsing failed
          */
-        void Parse(const std::string& frame);
+        [[nodiscard]] int Parse(const std::string& frame);
 
         /**
          * Prepare request for any output stream.
