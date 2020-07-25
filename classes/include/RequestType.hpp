@@ -8,18 +8,18 @@ namespace Requests {
      */
     enum class RequestType : int {
         // default or error
-        UNDEFINED,
+        UNDEFINED           = 0x0001,
         // chatroom
-        LEAVE_CHATROOM,
-        JOIN_CHATROOM,
-        ABOUT_CHATROOM,
-        CREATE_CHATROOM,
-        LIST_CHATROOM,
+        LEAVE_CHATROOM      = 0x0002,
+        JOIN_CHATROOM       = 0x0004,
+        ABOUT_CHATROOM      = 0x0008,
+        CREATE_CHATROOM     = 0x0010,
+        LIST_CHATROOM       = 0x0020,
         // server
-        AUTHORIZE,
-        POST,
+        AUTHORIZE           = 0x0040,
+        POST                = 0x0080,
         // chat
-        CHAT_MESSAGE,
+        CHAT_MESSAGE        = 0x0100,
 
         COUNT
     };
