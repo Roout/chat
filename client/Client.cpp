@@ -1,4 +1,4 @@
-#include "client.hpp"
+#include "Client.hpp"
 #include <iostream>
 #include <string_view>
 #include <functional> // std::bind
@@ -57,17 +57,17 @@ void Client::Close() {
 
 void Client::OnConnect(const boost::system::error_code& err) {
     if(err) {
-        std::cerr << err.message() << "\n";
+        std::cerr << "Client failed to connect with error: " << err.message() << "\n";
     } 
     else {
-        std::cerr << "Connected successfully!\n";
+        std::cerr << "Client connected successfully!\n";
         // start waiting incoming calls
         this->Read();
     }
 }
 
 void Client::Read() {
-    std::cout << "Start reading!\n";
+    std::cout << "Client start reading!\n";
     m_inbox.resize(1024);
     m_socket.async_read_some(
         asio::buffer(m_inbox),
@@ -86,14 +86,14 @@ void Client::OnRead(
         std::string_view sv(m_inbox);
         const auto suffixSize { static_cast<int>(m_inbox.size()) - transferredBytes };
         sv.remove_suffix(suffixSize);
-        std::cout << m_socket.remote_endpoint() << ": "<< sv << '\n'; 
+        std::cout << "Server says: " << sv << '\n'; 
     }
 
     if( !error ) {
         this->Read();
     } 
     else /*if( error == boost::asio::error::eof) */ {
-        std::cerr << error.message() << "\n";
+        std::cerr << "Client failed to read with error: " << error.message() << "\n";
         /// TODO: Is it safe to close already closed socket
         this->Close();
     }
@@ -106,7 +106,7 @@ void Client::OnWrite(
     using namespace std::placeholders;
 
     if( !error ) {
-        std::cout << "Just sent: " << transferredBytes << " bytes\n";
+        std::cout << "Client just sent: " << transferredBytes << " bytes\n";
 
         if(m_outbox.GetQueueSize()) {
             // we need to send other data
@@ -120,7 +120,7 @@ void Client::OnWrite(
     } 
     else {
         m_isWriting = false;
-        std::cerr << "Error on writting error: " << error.message() << '\n';
+        std::cerr << "Client has error on writting: " << error.message() << '\n';
         this->Close();
     }
 }
