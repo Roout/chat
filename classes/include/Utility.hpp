@@ -1,7 +1,7 @@
 #ifndef LOCAL_UTILITY_HPP
 #define LOCAL_UTILITY_HPP
 
-namespace Util {
+namespace Utils {
     /**
      * Work with enumerations: 
      */
@@ -18,6 +18,11 @@ namespace Util {
     template<class Enum>
     constexpr Enum EnumCast(size_t value) noexcept {
         return static_cast<Enum>(value);
+    }
+
+    template<class ...Args>
+    constexpr size_t CreateMask(Args&& ... args) noexcept {
+        return (static_cast<size_t>(args) | ...);
     }
 }
 
