@@ -3,7 +3,7 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <vector>
-#include "client.hpp"
+#include "Client.hpp"
 using namespace std;
 
 int main() {
@@ -14,10 +14,19 @@ int main() {
 	Client client { io };
 	client.Connect("127.0.0.1", 15001);
 	vector<thread> ts;
-	for(int i = 0; i < 2; i++) 
+	for(int i = 0; i < 2; i++) {
 		ts.emplace_back([io]() {
-			io->run(); 
+			for (;;) {
+				try {
+					io->run();
+					break; // run() exited normally
+				}
+				catch (...) {
+					// Deal with exception as appropriate.
+				}
+			}
 		});
+	}
 	
 	cin.ignore();
 
@@ -25,6 +34,10 @@ int main() {
 		string str;
 		getline(cin, str);
 		client.Write(std::move(str));
+	}
+
+	for(auto& t: ts) {
+		t.join();
 	}
 	return 0;
 }
