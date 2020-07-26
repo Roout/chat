@@ -17,6 +17,7 @@ set ( header_files
   "../classes/include/RequestType.hpp"
   "../classes/include/Request.hpp"
   "../classes/include/Utility.hpp"
+  "../classes/include/InteractionStage.hpp"
 )
 
 add_library(${This}_lib STATIC ${sources_files} ${header_files})

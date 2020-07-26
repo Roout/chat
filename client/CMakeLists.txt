@@ -14,6 +14,7 @@ set ( header_files
   "../classes/include/DoubleBuffer.hpp"
   "../classes/include/RequestType.hpp"
   "../classes/include/Request.hpp"
+  "../classes/include/InteractionStage.hpp"
   "../classes/include/Utility.hpp"
 )
 

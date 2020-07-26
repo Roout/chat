@@ -3,6 +3,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
+#include "InteractionStage.hpp"
 
 namespace asio = boost::asio;
 

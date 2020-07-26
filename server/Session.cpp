@@ -152,7 +152,7 @@ void Session::WriteSomeHandler(
 std::string Session::SolveRequest(const Requests::Request& request) {
     Requests::Request reply {};
     switch(m_state) {
-        case State::ACCEPTED :
+        case IStage::Stage::ACCEPTED :
             {
                 reply.SetType(Requests::RequestType::POST);
                 // check if it's an auth request; 
@@ -163,7 +163,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         "Thank you for using my chat application!\n"
                     };
                     reply.SetBody(body);
-                    m_state = State::AUTHORIZED;
+                    m_state = IStage::Stage::AUTHORIZED;
                 } else { // send warning about wrong expected request 
                     const std::string body {
                         "Welcome! Is your name '" + request.GetName() + "'?\n"
@@ -173,7 +173,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                     reply.SetBody(body);
                 }
             } break;
-        case State::AUTHORIZED : 
+        case IStage::Stage::AUTHORIZED : 
             { // process request
                 reply.SetType(Requests::RequestType::POST);
                 const auto expectedRequests {
@@ -208,7 +208,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                 }
             }
             break;
-        case State::BUSY : 
+        case IStage::Stage::BUSY : 
             // asio::post(m_strand, std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
             break;
         default: break;

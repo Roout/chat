@@ -71,7 +71,7 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
     request.SetBody("Testing authorization");
     
     // send authorization request to server
-    this->m_client->Write(request.Serialize());    
+    m_client->Write(request.Serialize());    
     // give 3 seconds for server - client communication
     this->WaitFor(3'000);
     
