@@ -69,6 +69,11 @@ private:
      */
     std::string SolveRequest(const Requests::Request& request);
 
+    /**
+     * The authorization must firstly be verified. 
+     */
+    [[nodiscard]] bool ValidateAuth(const Requests::Request& request) const noexcept;
+
     /// data members
 private:
     /**
@@ -92,7 +97,7 @@ private:
 
     bool m_isWriting { false };
 
-    IStage::Stage m_state { IStage::Stage::ACCEPTED };
+    IStage::State m_state { IStage::State::UNAUTHORIZED };
 
 };
 

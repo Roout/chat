@@ -2,6 +2,7 @@
 #include "Server.hpp"
 #include "Request.hpp"
 #include "RequestType.hpp"
+#include "InteractionStage.hpp"
 #include "Utility.hpp"
 
 #include <functional>
@@ -48,13 +49,9 @@ void Session::Write() {
 }
 
 void Session::Read() {
-    // TODO: is it limit which we can read? If it's true, 
-    // then confirm that the situation with full buffer has been processed.
-    m_inbox.prepare(1024);
-
     asio::async_read_until(
         m_socket,
-        m_inbox,
+        m_inbox, // What is limit of asio::streambuf
         Requests::REQUEST_DELIMETER,
         asio::bind_executor(
             m_strand, 
@@ -90,7 +87,8 @@ void Session::ReadSomeHandler(
     if(!error) {
         std::cout << "Session just recive: " << transferredBytes << " bytes.\n";
         
-        m_inbox.commit(transferredBytes);
+        // boost::asio::async_read_until calls commit by itself
+        // m_inbox.commit(transferredBytes);
         
         const auto data { m_inbox.data() }; // asio::streambuf::const_buffers_type
         std::string recieved {
@@ -108,7 +106,8 @@ void Session::ReadSomeHandler(
         Requests::Request incomingRequest {};
         const auto result = incomingRequest.Parse(recieved);
         if( !result ) {
-            this->Write(this->SolveRequest(incomingRequest));
+            const auto reply { this->SolveRequest(incomingRequest) };
+            this->Write(reply);
         } else {
             std::cerr << "Parsing request: {" 
                 << recieved 
@@ -148,32 +147,40 @@ void Session::WriteSomeHandler(
     }
 }
 
+bool Session::ValidateAuth(const Requests::Request& request) const noexcept {
+    // for now it's just a dummy without logic
+    return request.GetType() == Requests::RequestType::AUTHORIZE;
+}
 
 std::string Session::SolveRequest(const Requests::Request& request) {
     Requests::Request reply {};
     switch(m_state) {
-        case IStage::Stage::ACCEPTED :
+        case IStage::State::UNAUTHORIZED:
             {
-                reply.SetType(Requests::RequestType::POST);
                 // check if it's an auth request; 
-                const auto isAuthRequest { request.GetType() == Requests::RequestType::AUTHORIZE };
-                if(isAuthRequest) { // send confirm post request
+                if(this->ValidateAuth(request)) { // send confirm AUTHORIZE request
+                    reply.SetType(Requests::RequestType::AUTHORIZE);
+                    reply.SetStage(IStage::State::AUTHORIZED);
+                    reply.SetCode(Requests::ErrorCode::SUCCESS);
                     const std::string body {
                         "Welcome, " + request.GetName() + "!\n"
-                        "Thank you for using my chat application!\n"
+                        "Thank you for using my chat application!"
                     };
                     reply.SetBody(body);
-                    m_state = IStage::Stage::AUTHORIZED;
+                    m_state = IStage::State::AUTHORIZED;
                 } else { // send warning about wrong expected request 
+                    reply.SetType(Requests::RequestType::AUTHORIZE);
+                    reply.SetStage(IStage::State::UNAUTHORIZED);
+                    reply.SetCode(Requests::ErrorCode::FAILURE);
                     const std::string body {
                         "Welcome! Is your name '" + request.GetName() + "'?\n"
                         "Sorry, but you send wrong request type.\n"
-                        "Authorization expected!\n"
+                        "Authorization expected!"
                     };
                     reply.SetBody(body);
                 }
             } break;
-        case IStage::Stage::AUTHORIZED : 
+        case IStage::State::AUTHORIZED : 
             { // process request
                 reply.SetType(Requests::RequestType::POST);
                 const auto expectedRequests {
@@ -190,7 +197,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         const std::string body {
                             "Here goes list of avaible chatrooms:\n"
                             "Test chatroom #1\n"
-                            "Test chatroom #2345\n"
+                            "Test chatroom #2345"
                         };
                         reply.SetBody(body);    
                     }
@@ -208,7 +215,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                 }
             }
             break;
-        case IStage::Stage::BUSY : 
+        case IStage::State::BUSY : 
             // asio::post(m_strand, std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
             break;
         default: break;
