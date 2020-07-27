@@ -1,4 +1,7 @@
 #include "Client.hpp"
+#include "Request.hpp"
+#include "RequestType.hpp"
+
 #include <iostream>
 #include <string_view>
 #include <functional> // std::bind
@@ -61,16 +64,18 @@ void Client::OnConnect(const boost::system::error_code& err) {
     } 
     else {
         std::cerr << "Client connected successfully!\n";
+        m_stage = IStage::State::UNAUTHORIZED;
         // start waiting incoming calls
         this->Read();
     }
 }
 
 void Client::Read() {
-    std::cout << "Client start reading!\n";
-    m_inbox.resize(1024);
-    m_socket.async_read_some(
-        asio::buffer(m_inbox),
+    // m_inbox.prepare(1024);
+    asio::async_read_until(
+        m_socket,
+        m_inbox,
+        Requests::REQUEST_DELIMETER,
         asio::bind_executor(
             m_strand,
             std::bind(&Client::OnRead, this, std::placeholders::_1, std::placeholders::_2)
@@ -82,19 +87,39 @@ void Client::OnRead(
     const boost::system::error_code& error, 
     size_t transferredBytes
 ) {
-    if(transferredBytes) {
-        std::string_view sv(m_inbox);
-        const auto suffixSize { static_cast<int>(m_inbox.size()) - transferredBytes };
-        sv.remove_suffix(suffixSize);
-        std::cout << "Server says: " << sv << '\n'; 
-    }
-
     if( !error ) {
+        std::cout << "Client just recive: " << transferredBytes << " bytes.\n";
+        
+        // boost::asio::async_read_until calls commit by itself 
+        // m_inbox.commit(transferredBytes);
+        
+        const auto data { m_inbox.data() }; // asio::streambuf::const_buffers_type
+        std::string recieved {
+            asio::buffers_begin(data), 
+            asio::buffers_begin(data) + transferredBytes
+        };
+        
+        boost::system::error_code error; 
+        std::cerr << m_socket.remote_endpoint(error) << ": " << recieved << '\n' ;
+
+        m_inbox.consume(transferredBytes);
+        
+        // TODO: may request not come fully in this operation?
+        Requests::Request incomingRequest {};
+        const auto result = incomingRequest.Parse(recieved);
+        if( !result ) {
+            this->HandleRequest(incomingRequest);
+        } else {
+            std::cerr << "Client: parsing request: {\n" 
+                << recieved 
+                << "} failed with error code: " 
+                << result << '\n';
+        }
         this->Read();
     } 
-    else /*if( error == boost::asio::error::eof) */ {
+    else {
         std::cerr << "Client failed to read with error: " << error.message() << "\n";
-        /// TODO: Is it safe to close already closed socket
+        /// TODO: Is it safe to close already closed socket?
         this->Close();
     }
 }
@@ -140,4 +165,39 @@ void Client::Write() {
             )
         )
     );
+}
+
+IStage::State Client::GetStage() const noexcept {
+    return m_stage;
+}
+
+void Client::HandleRequest(const Requests::Request& request) {
+    const auto type { request.GetType() };
+    const auto result { request.GetCode() };
+
+    switch(request.GetType()) {
+        case Requests::RequestType::AUTHORIZE:
+        { // it's reply on client's authorization request
+            if( result == Requests::ErrorCode::SUCCESS ) {
+                m_stage = request.GetStage();
+            } else {
+                throw "Failed to authorize";
+            }
+        } break;
+        case Requests::RequestType::POST:
+        { // it's either welcome message either message about server/connection state
+            if( result != Requests::ErrorCode::SUCCESS ) break;
+
+            if( m_stage == IStage::State::DISCONNECTED ) {
+                m_stage = request.GetStage();
+            } else if( m_stage == IStage::State::UNAUTHORIZED ) {
+                //...
+            }
+        } break;
+        case Requests::RequestType::LIST_CHATROOM:
+        {
+            
+        } break;
+        default: break;
+    }
 }

@@ -7,6 +7,10 @@
 
 namespace asio = boost::asio;
 
+namespace Requests{
+    class Request;
+}
+
 class Client final {
 public:
     
@@ -17,6 +21,12 @@ public:
     void Connect(const std::string& path, std::uint16_t port);
     
     void Write(std::string && text );
+
+    /**
+     * This function indicate stage which interaction between client and 
+     * server has already reached. 
+     */
+    IStage::State GetStage() const noexcept;
 
 private:
 
@@ -50,6 +60,13 @@ private:
         size_t transferredBytes
     );
 
+    /**
+     * This function handle incoming requests and 
+     * base on it's type, status and interaction stage 
+     * changes own state. 
+     */
+    void HandleRequest(const Requests::Request&);
+
 private:
     
     std::shared_ptr<asio::io_context>   m_io;
@@ -57,6 +74,7 @@ private:
     asio::ip::tcp::socket               m_socket;
     
     bool            m_isWriting { false };
-    std::string     m_inbox;
+    asio::streambuf m_inbox;
     Buffers         m_outbox;
+    IStage::State   m_stage { IStage::State::DISCONNECTED };
 };
