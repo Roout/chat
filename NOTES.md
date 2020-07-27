@@ -24,3 +24,5 @@ events have to wait until the handler completes the execution before being allow
 
 Example #1. Using system's executer:
 `boost::asio::post([](){}); // call with only callable object: function`
+
+`boost::asio::async_read*` can be called with `boost::asio::streambuf` as buffer. In this case note that this buffer will be committed inside `boost::asio::async_read*` function. The programmer only need to consume the used number of bytes.
