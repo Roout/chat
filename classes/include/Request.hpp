@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include "RequestType.hpp"
+#include "InteractionStage.hpp"
 
 namespace Requests {
 
@@ -11,9 +12,14 @@ namespace Requests {
      * Sequence used to divide important parts of the request (see Request::Impl)
      * during serialization.
      */
-    inline const std::string DELIMETER { "\n\n" };
+    inline const std::string DELIMETER { "+" };
 
     inline const std::string REQUEST_DELIMETER { "\n\r\n\r" };
+
+    enum class ErrorCode {
+        SUCCESS = 0x1,
+        FAILURE = 0x2
+    };
 
     class Request {
     public:
@@ -45,15 +51,23 @@ namespace Requests {
          */
         std::string Serialize() const;
 
-        void SetType(RequestType type);
+        void SetType(RequestType);
+
+        void SetStage(IStage::State);
+
+        void SetCode(ErrorCode);
 
         void SetChatroom(size_t chatroomId);
 
-        void SetName(const std::string& name);
+        void SetName(const std::string&);
 
-        void SetBody(const std::string& body);
+        void SetBody(const std::string&);
 
         RequestType GetType() const noexcept;
+
+        IStage::State GetStage() const noexcept;
+
+        ErrorCode GetCode() const noexcept;
 
         size_t GetChatroom() const noexcept;
 

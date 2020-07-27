@@ -11,6 +11,14 @@ namespace Requests {
          */
         RequestType m_type { RequestType::UNDEFINED };
         /**
+         * State of communication between client adn server
+         */
+        IStage::State m_stage { IStage::State::DISCONNECTED };
+        /**
+         * This is code used for RequestType::CONFIRM.
+         */
+        ErrorCode m_code { ErrorCode::SUCCESS };
+        /**
          * Id of the chatroom which will be joined.
          * Used on JOIN_CHATROOM request.
          */
@@ -35,40 +43,62 @@ namespace Requests {
 
     void Request::Reset() {
         m_impl->m_type = RequestType::UNDEFINED;
+        m_impl->m_stage = IStage::State::DISCONNECTED;
+        m_impl->m_code = ErrorCode::SUCCESS;
         m_impl->m_chatroomId = 0;
         m_impl->m_name.clear();
         m_impl->m_body.clear();
     }
 
     int Request::Parse(const std::string& frame) {
+        this->Reset();
+        
         size_t start { 0 }, end { 0 };
         const size_t skip { DELIMETER.size() };
         // type
-        end = frame.find_first_of(DELIMETER);
+        end = frame.find(DELIMETER, start);
         if( end == std::string::npos) {
             return 1;
         }
         const auto type { frame.substr(start, end - start) };
         m_impl->m_type = Utils::EnumCast<RequestType>(std::stoi(type));
-        // room id
+        // stage
         start = end + skip;
-        end = frame.find_first_of(DELIMETER, start);
+        end = frame.find(DELIMETER, start);
         if( end == std::string::npos) {
             return 2;
+        }
+        const auto stage { frame.substr(start, end - start) };
+        m_impl->m_stage = Utils::EnumCast<IStage::State>(std::stoi(stage));
+        // error code
+        start = end + skip;
+        end = frame.find(DELIMETER, start);
+        if( end == std::string::npos) {
+            return 3;
+        }
+        const auto code { frame.substr(start, end - start) };
+        m_impl->m_code = Utils::EnumCast<ErrorCode>(std::stoi(code));
+        // room id
+        start = end + skip;
+        end = frame.find(DELIMETER, start);
+        if( end == std::string::npos) {
+            return 4;
         }
         const auto room { frame.substr(start, end - start) };
         m_impl->m_chatroomId = std::stoi(room);
         // username
         start = end + skip;
-        end = frame.find_first_of(DELIMETER, start);
+        end = frame.find(DELIMETER, start);
         if( end == std::string::npos) {
-            return 3;
+            return 5;
         }
         m_impl->m_name = frame.substr(start, end - start);
         // body 
-        // TODO: add check for request delimeter and return code (4) 
         start = end + skip;
-        end = frame.size() - REQUEST_DELIMETER.size();
+        end = frame.find(REQUEST_DELIMETER, start);
+        if( end == std::string::npos) {
+            return 6;
+        }
         m_impl->m_body = frame.substr(start, end - start);
 
         return 0;
@@ -77,6 +107,10 @@ namespace Requests {
     std::string Request::Serialize() const {
         std::string result {};
         result += std::to_string(static_cast<size_t>(m_impl->m_type));
+        result += DELIMETER;
+        result += std::to_string(static_cast<size_t>(m_impl->m_stage));
+        result += DELIMETER;
+        result += std::to_string(static_cast<size_t>(m_impl->m_code));
         result += DELIMETER;
         result += std::to_string(m_impl->m_chatroomId);
         result += DELIMETER;
@@ -90,6 +124,14 @@ namespace Requests {
 
     void Request::SetType(RequestType type) {
         m_impl->m_type = type;
+    }
+
+    void Request::SetStage(IStage::State stage) {
+        m_impl->m_stage = stage;
+    }
+
+    void Request::SetCode(ErrorCode code) {
+        m_impl->m_code = code;
     }
 
     void Request::SetChatroom(size_t chatroomId) {
@@ -107,7 +149,15 @@ namespace Requests {
     RequestType Request::GetType() const noexcept {
         return m_impl->m_type;
     }
-
+    
+    IStage::State Request::GetStage() const noexcept {
+        return m_impl->m_stage;
+    }
+    
+    ErrorCode Request::GetCode() const noexcept {
+        return m_impl->m_code;
+    }
+    
     size_t Request::GetChatroom() const noexcept {
         return m_impl->m_chatroomId;
     }
