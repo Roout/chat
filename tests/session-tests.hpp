@@ -2,6 +2,7 @@
 #include "Server.hpp"
 #include "Session.hpp"
 #include "Client.hpp"
+#include "InteractionStage.hpp"
 
 #include <memory>
 #include <thread>
@@ -59,9 +60,15 @@ protected:
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
 };
 
-
 TEST_F(TCPInteractionTest, OnlyFixureSetup) {
-    EXPECT_TRUE(true) << "Problems with Fixure initialization occured";
+    // prepare (done in ::SetUp method)
+    // execute (done in ::SetUp method)
+    this->WaitFor(3'000);
+    // test
+    EXPECT_EQ(m_client->GetStage(), IStage::State::UNAUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::UNAUTHORIZED);
 }
 
 TEST_F(TCPInteractionTest, ClientAuthorization) {
@@ -76,6 +83,9 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
     this->WaitFor(3'000);
     
     // check results:
-
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED);
 }
 
