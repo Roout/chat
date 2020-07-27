@@ -1,5 +1,7 @@
 ﻿#include "Server.hpp"
 #include "Session.hpp"
+#include "Request.hpp"
+#include "InteractionStage.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -22,16 +24,22 @@ void Server::Start() {
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code msg; 
-            std::cerr << "Accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
+            std::cerr << "Server accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
             
             std::stringstream ss;
             ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg) << '\n';
-            ss << "Please, login!";
-            std::string welcomeMessage = ss.rdbuf()->str();
+            ss << "Please complete authorization to gain some access.";
+            std::string body = ss.rdbuf()->str();
 
+            Requests::Request request {};
+            request.SetType(Requests::RequestType::POST);
+            request.SetStage(IStage::State::UNAUTHORIZED);
+            request.SetCode(Requests::ErrorCode::SUCCESS);
+            request.SetBody(body);
+            
             m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket), this));
             // welcome new user
-            m_sessions.back()->Write(welcomeMessage);
+            m_sessions.back()->Write(request.Serialize());
             m_sessions.back()->Read();
             // wait for the new connections again
             this->Start();
