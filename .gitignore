@@ -267,3 +267,6 @@ build/
 
 # google test
 googletest/
+
+# all log files
+*.txt
