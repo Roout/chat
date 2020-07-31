@@ -51,6 +51,12 @@ namespace Requests {
          */
         std::string Serialize() const;
 
+        /**
+         * Return request as string that can be understandable by human.
+         * Used for debug. 
+         */
+        std::string AsString() const;
+
         void SetType(RequestType);
 
         void SetStage(IStage::State);

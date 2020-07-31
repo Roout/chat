@@ -3,6 +3,77 @@
 #include "../include/Utility.hpp"
 #include <string>
 
+namespace {
+    std::string AsString(const Requests::RequestType ty) {
+        std::string result{};
+        switch(ty) {
+            case Requests::RequestType::UNDEFINED: 
+                result = "UNDEFINED"; 
+                break;
+            case Requests::RequestType::LEAVE_CHATROOM: 
+                result = "LEAVE_CHATROOM"; 
+                break;
+            case Requests::RequestType::JOIN_CHATROOM: 
+                result = "JOIN_CHATROOM"; 
+                break;
+            case Requests::RequestType::ABOUT_CHATROOM: 
+                result = "ABOUT_CHATROOM"; 
+                break;
+            case Requests::RequestType::CREATE_CHATROOM: 
+                result = "CREATE_CHATROOM"; 
+                break;
+            case Requests::RequestType::LIST_CHATROOM: 
+                result = "LIST_CHATROOM"; 
+                break;
+            case Requests::RequestType::AUTHORIZE: 
+                result = "AUTHORIZE"; 
+                break;
+            case Requests::RequestType::POST: 
+                result = "POST"; 
+                break;
+            case Requests::RequestType::CHAT_MESSAGE: 
+                result = "CHAT_MESSAGE"; 
+                break;
+            default: break;
+        }
+        return result;
+    }
+
+    std::string AsString(const IStage::State ty) {
+        std::string result{};
+        switch(ty) {
+            case IStage::State::DISCONNECTED: 
+                result = "IStage::State::DISCONNECTED"; 
+                break;
+            case IStage::State::UNAUTHORIZED: 
+                result = "IStage::State::UNAUTHORIZED"; 
+                break;
+            case IStage::State::AUTHORIZED:
+                result = "IStage::State::AUTHORIZED"; 
+                break;
+            case IStage::State::BUSY:
+                result = "IStage::State::BUSY"; 
+                break;
+            default: break;
+        }
+        return result;
+    }
+
+    std::string AsString(const Requests::ErrorCode ty) {
+        std::string result {};
+        switch(ty) {
+            case Requests::ErrorCode::SUCCESS: 
+                result = "ErrorCode::SUCCESS"; 
+                break;
+            case Requests::ErrorCode::FAILURE: 
+                result = "ErrorCode::FAILURE"; 
+                break;
+            default: break;
+        }
+        return result;
+    }
+}
+
 namespace Requests {
 
     struct Request::Impl {
@@ -119,6 +190,25 @@ namespace Requests {
         result += m_impl->m_body;
         // end request
         result += REQUEST_DELIMETER;
+        return result;
+    }
+
+    std::string Request::AsString() const {
+        std::string result {};
+        result += "Request {\n";
+        result += ::AsString(m_impl->m_type);
+        result += "\n";
+        result += ::AsString(m_impl->m_stage);
+        result += "\n";
+        result += ::AsString(m_impl->m_code);
+        result += "\n";
+        result += std::to_string(m_impl->m_chatroomId);
+        result += "\n";
+        result += m_impl->m_name;
+        result += "\n";
+        result += m_impl->m_body;
+        // end request
+        result += "\n} End request.\n";
         return result;
     }
 
