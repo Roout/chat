@@ -60,10 +60,16 @@ void Client::Close() {
 
 void Client::OnConnect(const boost::system::error_code& err) {
     if(err) {
-        std::cerr << "Client failed to connect with error: " << err.message() << "\n";
+        m_logger.Write( 
+            LogType::error, 
+            "Client failed to connect with error: ", err.message(), "\n" 
+        );
     } 
     else {
-        std::cerr << "Client connected successfully!\n";
+        m_logger.Write( 
+            LogType::info, 
+            "Client connected successfully!\n"
+        );
         m_stage = IStage::State::UNAUTHORIZED;
         // start waiting incoming calls
         this->Read();
@@ -88,7 +94,10 @@ void Client::OnRead(
     size_t transferredBytes
 ) {
     if( !error ) {
-        std::cout << "Client just recive: " << transferredBytes << " bytes.\n";
+        m_logger.Write( 
+            LogType::info, 
+            "Client just recive: ", transferredBytes, " bytes.\n"
+        );
         
         // boost::asio::async_read_until calls commit by itself 
         // m_inbox.commit(transferredBytes);
@@ -99,26 +108,33 @@ void Client::OnRead(
             asio::buffers_begin(data) + transferredBytes
         };
         
-        boost::system::error_code error; 
-        std::cerr << m_socket.remote_endpoint(error) << ": " << recieved << '\n' ;
-
         m_inbox.consume(transferredBytes);
         
         // TODO: may request not come fully in this operation?
         Requests::Request incomingRequest {};
         const auto result = incomingRequest.Parse(recieved);
+        
+        boost::system::error_code error; 
+        m_logger.Write( 
+            LogType::info, 
+            m_socket.remote_endpoint(error), ": ", incomingRequest.AsString(), '\n' 
+        );
+
         if( !result ) {
             this->HandleRequest(incomingRequest);
         } else {
-            std::cerr << "Client: parsing request: {\n" 
-                << recieved 
-                << "} failed with error code: " 
-                << result << '\n';
+            m_logger.Write( 
+                LogType::error, 
+                "Client: parsing request: {\n", incomingRequest.AsString(), "} failed with error code: ", result, '\n'
+            );
         }
         this->Read();
     } 
     else {
-        std::cerr << "Client failed to read with error: " << error.message() << "\n";
+        m_logger.Write( 
+            LogType::error, 
+            "Client failed to read with error: ", error.message(), "\n"
+        );
         /// TODO: Is it safe to close already closed socket?
         this->Close();
     }
@@ -131,7 +147,10 @@ void Client::OnWrite(
     using namespace std::placeholders;
 
     if( !error ) {
-        std::cout << "Client just sent: " << transferredBytes << " bytes\n";
+        m_logger.Write( 
+            LogType::info, 
+            "Client just sent: ", transferredBytes, " bytes\n"
+        );
 
         if(m_outbox.GetQueueSize()) {
             // we need to send other data
@@ -145,7 +164,10 @@ void Client::OnWrite(
     } 
     else {
         m_isWriting = false;
-        std::cerr << "Client has error on writting: " << error.message() << '\n';
+        m_logger.Write( 
+            LogType::error, 
+            "Client has error on writting: ", error.message(), '\n'
+        );
         this->Close();
     }
 }

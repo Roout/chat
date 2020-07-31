@@ -24,7 +24,9 @@ void Server::Start() {
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code msg; 
-            std::cerr << "Server accepted connection on endpoint: " << m_socket->remote_endpoint(msg) << "\n";
+            this->Write(LogType::info, 
+                "Server accepted connection on endpoint: ", m_socket->remote_endpoint(msg), "\n"
+            );
             
             std::stringstream ss;
             ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg) << '\n';
@@ -51,7 +53,9 @@ void Server::Shutdown() {
     boost::system::error_code ec;
     m_acceptor.close(ec);
     if(ec) {
-        std::cerr<< "Server closed acceptor with error: " << ec.message() << "\n";
+        this->Write(LogType::error, 
+            "Server closed acceptor with error: ", ec.message(), "\n"
+        );
     }
 
     for(auto& s: m_sessions) s->Close();

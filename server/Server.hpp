@@ -4,6 +4,7 @@
 #include <optional>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
+#include "Log.hpp"
 
 class Session;
 
@@ -25,6 +26,10 @@ private:
     
     void BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<const Session>);
 
+    template<class ...Args>
+    void Write(const LogType ty, Args&& ...args) {
+        m_logger.Write(ty, std::forward<Args>(args)...);
+    }
     /**
      * Context is being passed by a pointer because we don't need to know
      * where and how it's being run. We just ditch this responsibility to someone else.
@@ -42,5 +47,7 @@ private:
      * we need to have allocated control block for ::shared_from_this
      */
     std::vector<std::shared_ptr<Session>>   m_sessions;
+
+    Log m_logger{"server_log.txt"};
 };
 

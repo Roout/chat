@@ -70,13 +70,17 @@ void Session::Close() {
     boost::system::error_code ec;
     m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     if(ec) { 
-        std::cerr<< "Session's socket called shutdown with error: " << ec.message() << '\n';
+        m_server->Write(LogType::error, 
+            "Session's socket called shutdown with error: ", ec.message(), '\n'
+        );
     }
     ec.clear();
     
     m_socket.close(ec);
     if(ec) {
-        std::cerr<< "Session's socket is being closed with error: " << ec.message() << '\n';
+        m_server->Write(LogType::error, 
+            "Session's socket is being closed with error: ", ec.message(), '\n'
+        );
     } 
 }
 
@@ -85,8 +89,9 @@ void Session::ReadSomeHandler(
     size_t transferredBytes
 ) {
     if(!error) {
-        std::cout << "Session just recive: " << transferredBytes << " bytes.\n";
-        
+        m_server->Write(LogType::info, 
+            "Session just recive: ", transferredBytes, " bytes.\n"
+        );
         // boost::asio::async_read_until calls commit by itself
         // m_inbox.commit(transferredBytes);
         
@@ -95,30 +100,34 @@ void Session::ReadSomeHandler(
             asio::buffers_begin(data), 
             asio::buffers_begin(data) + transferredBytes
         };
-        
-        boost::system::error_code error; 
-        std::cerr << m_socket.remote_endpoint(error) << ": " << recieved << '\n' ;
-
+    
         m_inbox.consume(transferredBytes);
         
         // TODO: request may not come fully in this operation
         // so solve this situation too.
         Requests::Request incomingRequest {};
         const auto result = incomingRequest.Parse(recieved);
+
+        boost::system::error_code ec; 
+        m_server->Write(LogType::info, 
+            m_socket.remote_endpoint(ec), ": ", incomingRequest.AsString(), '\n'
+        );
+
         if( !result ) {
             const auto reply { this->SolveRequest(incomingRequest) };
             this->Write(reply);
         } else {
-            std::cerr << "Parsing request: {" 
-                << recieved 
-                << "} failed with error code: " 
-                << result << '\n';
+            m_server->Write(LogType::error, 
+                "Parsing request: {\n", incomingRequest.AsString(), "} failed with error code: ", result, '\n'
+            );
         }
                 
         this->Read();
     } 
     else {
-        std::cerr << "Session trying to read invoked error: " << error.message() << "\n";
+        m_server->Write(LogType::error, 
+            "Session trying to read invoked error: ", error.message(), '\n'
+        );
     }
 }
 
@@ -127,11 +136,15 @@ void Session::WriteSomeHandler(
     std::size_t transferredBytes
 ) {
     if(!error) {
-        std::cout << "Session sent: " << transferredBytes << " bytes\n";
+        m_server->Write(LogType::info, 
+            "Session sent: ", transferredBytes, " bytes.\n"
+        );
 
         if( m_outbox.GetQueueSize() ) {
             // we need to Write other data
-            std::cout << "Session need to Write " << m_outbox.GetQueueSize() << " messages.\n";
+            m_server->Write(LogType::info, 
+                "Session need to Write ", m_outbox.GetQueueSize(), " messages.\n"
+            );
             asio::post(m_strand, [self = shared_from_this()](){
                 self->Write();
             }); 
@@ -142,7 +155,9 @@ void Session::WriteSomeHandler(
     else /* if(error == boost::asio::error::eof) */ {
         // Connection was closed by the remote peer 
         // or any other error happened 
-        std::cerr << "Session has error trying to write: " << error.message() << "\n";
+        m_server->Write(LogType::error, 
+            "Session has error trying to write: ", error.message(), "\n"
+        );
         this->Close();
     }
 }

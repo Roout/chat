@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
 #include "InteractionStage.hpp"
+#include "Log.hpp"
 
 namespace asio = boost::asio;
 
@@ -77,4 +78,6 @@ private:
     asio::streambuf m_inbox;
     Buffers         m_outbox;
     IStage::State   m_stage { IStage::State::DISCONNECTED };
+
+    Log             m_logger { "client_log.txt" };
 };
