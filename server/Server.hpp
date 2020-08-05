@@ -4,6 +4,7 @@
 #include <optional>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
+#include "Chatroom.hpp"
 #include "Log.hpp"
 
 class Session;
@@ -20,16 +21,19 @@ public:
 private:
     friend class Session;
 
-    void Broadcast(const std::string& text);
+    /**
+     * Move session from chatroom for unauthorized users to chatroom with required id. 
+     */
+    bool AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& session);
 
-    void RemoveSession(const Session * s);
-    
-    void BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<const Session>);
+    void LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& session);
 
     template<class ...Args>
-    void Write(const LogType ty, Args&& ...args) {
-        m_logger.Write(ty, std::forward<Args>(args)...);
-    }
+    void Write(const LogType ty, Args&& ...args);
+
+    /// data mambers:
+private:  
+    Log m_logger{"server_log.txt"};
     /**
      * Context is being passed by a pointer because we don't need to know
      * where and how it's being run. We just ditch this responsibility to someone else.
@@ -37,17 +41,16 @@ private:
     std::shared_ptr<asio::io_context>       m_context;
     
     asio::ip::tcp::acceptor                 m_acceptor;
-    /**
-     * Socket  
-     */
-    std::optional<asio::ip::tcp::socket>    m_socket;
-    /**
-     * Use shared_ptr instead of simple instance because 
-     * Session is derived from std::enamble_shared_from_this so
-     * we need to have allocated control block for ::shared_from_this
-     */
-    std::vector<std::shared_ptr<Session>>   m_sessions;
 
-    Log m_logger{"server_log.txt"};
+    std::optional<asio::ip::tcp::socket>    m_socket;
+    
+    chat::Chatroom                          m_hall;
+
+    std::vector<chat::Chatroom>             m_chatrooms;
+
 };
 
+template<class ...Args>
+void Server::Write(const LogType ty, Args&& ...args) {
+    m_logger.Write(ty, std::forward<Args>(args)...);
+}

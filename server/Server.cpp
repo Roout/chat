@@ -9,8 +9,10 @@
 
 Server::Server(std::shared_ptr<asio::io_context> context, std::uint16_t port) :
     m_context { context },
-    m_acceptor { *m_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port) }
+    m_acceptor { *m_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port) },
+    m_hall { "unautherized users" }
 {
+    m_chatrooms.reserve(10);
 }
 
 void Server::Start() {
@@ -23,13 +25,13 @@ void Server::Start() {
     /// A: As far as I can see I need strand here for ostream object safety...
     m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
         if( !code ) {
-            boost::system::error_code msg; 
+            boost::system::error_code err; 
             this->Write(LogType::info, 
-                "Server accepted connection on endpoint: ", m_socket->remote_endpoint(msg), "\n"
+                "Server accepted connection on endpoint: ", m_socket->remote_endpoint(err), "\n"
             );
             
             std::stringstream ss;
-            ss << "Welcome to my server, user #" << m_socket->remote_endpoint(msg) << '\n';
+            ss << "Welcome to my server, user #" << m_socket->remote_endpoint(err) << '\n';
             ss << "Please complete authorization to gain some access.";
             std::string body = ss.rdbuf()->str();
 
@@ -38,11 +40,14 @@ void Server::Start() {
             request.SetStage(IStage::State::UNAUTHORIZED);
             request.SetCode(Requests::ErrorCode::SUCCESS);
             request.SetBody(body);
-            
-            m_sessions.emplace_back(std::make_shared<Session>(std::move(*m_socket), this));
+
+            auto newSession { std::make_shared<Session>(std::move(*m_socket), this) };
+            if(!m_hall.AddSession(newSession)) {
+                // TODO: failed to add new session most likely due to connection limit 
+            }
             // welcome new user
-            m_sessions.back()->Write(request.Serialize());
-            m_sessions.back()->Read();
+            newSession->Write(request.Serialize());
+            newSession->Read();
             // wait for the new connections again
             this->Start();
         }
@@ -58,45 +63,45 @@ void Server::Shutdown() {
         );
     }
 
-    for(auto& s: m_sessions) s->Close();
-    m_sessions.clear();
+    m_hall.Close();
+    for(auto& chat: m_chatrooms) chat.Close();
 }
 
-void Server::RemoveSession(const Session * s) {
-    m_sessions.erase(
-        std::remove_if(m_sessions.begin(), m_sessions.end(), [s](const auto& session){
-            return session.get() == s;
-        }),
-        m_sessions.end()
-    );
-}
-
-void Server::Broadcast(const std::string& text) {
-    // remove closed sessions
-     m_sessions.erase(
-        std::remove_if(m_sessions.begin(), m_sessions.end(), [](const auto& session){
-            return session->IsClosed();
-        }),
-        m_sessions.end()
-    );
-
-    for(const auto& session: m_sessions) {
-        session->Write(text);
+bool Server::AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& session) {
+    const auto isRemoved = m_hall.RemoveSession(session.get());
+    if(!isRemoved) {
+        // TODO: can't find session in chatroom for unAuth
     }
+    // find chatroom with required id
+    const auto chat = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const auto& chatroom){
+        return chatroom.GetId() == chatroomId;
+    });
+    // if chatroom is found then try to assign session to chatroom
+    if( chat != m_chatrooms.end() ) {
+        // if chatroom was assigned successfully return true otherwise false
+        return chat->AddSession(session);
+    }
+    return false;
 }
 
-void Server::BroadcastEveryoneExcept(const std::string& text, std::shared_ptr<const Session> exception) {
-    // remove closed sessions
-     m_sessions.erase(
-        std::remove_if(m_sessions.begin(), m_sessions.end(), [](const auto& session){
-            return session->IsClosed();
-        }),
-        m_sessions.end()
-    );
+void Server::LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& session) {
+    // Check whether it's a hall chatroom
+    if( chatroomId == m_hall.GetId()) {
+        /// TODO: user can't leave hall!
+        return;
+    } 
+    
+    const auto chat = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const auto& chatroom){
+        return chatroom.GetId() == chatroomId;
+    });
 
-    for(const auto& session: m_sessions) {
-        if( exception.get() != session.get()) {
-            session->Write(text);
+    if( chat != m_chatrooms.end() ) {
+        if( chat->RemoveSession(session.get()) ) {
+            const auto isInHall = m_hall.AddSession(session);
+            if( !isInHall ) {
+                /// TODO: some weird error
+            }
         }
     }
 }
+
