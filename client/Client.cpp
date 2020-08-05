@@ -9,12 +9,15 @@
 Client::Client(std::shared_ptr<asio::io_context> io):
     m_io { io },
     m_strand { *io },
-    m_socket { *m_io }
+    m_socket { *m_io },
+    m_isClosed { false }
 {
 }
 
 Client::~Client() {
-    this->Close();
+    if( !m_isClosed ) {
+        this->Close();
+    }
 }
 
 void Client::Connect(const std::string& path, std::uint16_t port) {
@@ -56,6 +59,7 @@ void Client::Close() {
     if(ec) {
 
     }
+    m_isClosed = true;
 }
 
 void Client::OnConnect(const boost::system::error_code& err) {
@@ -135,7 +139,6 @@ void Client::OnRead(
             LogType::error, 
             "Client failed to read with error: ", error.message(), "\n"
         );
-        /// TODO: Is it safe to close already closed socket?
         this->Close();
     }
 }

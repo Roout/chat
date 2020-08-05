@@ -70,14 +70,16 @@ private:
 
 private:
     
+    Log             m_logger { "client_log.txt" };
+    
     std::shared_ptr<asio::io_context>   m_io;
     asio::io_context::strand            m_strand;
     asio::ip::tcp::socket               m_socket;
     
+    bool            m_isClosed { false };
     bool            m_isWriting { false };
     asio::streambuf m_inbox;
     Buffers         m_outbox;
     IStage::State   m_stage { IStage::State::DISCONNECTED };
 
-    Log             m_logger { "client_log.txt" };
 };
