@@ -2,6 +2,7 @@
 #define SESSION_HPP
 
 #include <string>
+#include <optional>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
 #include "InteractionStage.hpp"
@@ -9,6 +10,9 @@
 namespace asio = boost::asio;
 
 class Server;
+namespace chat {
+    class Chatroom;
+}
 namespace Requests {
     class Request;
 }
@@ -22,7 +26,8 @@ public:
     );
 
     ~Session() {
-        this->Close();
+        if( !m_isClosed ) 
+            this->Close();
     };
 
     /**
@@ -42,11 +47,16 @@ public:
     bool IsClosed() const noexcept {
         return m_isClosed;
     }
+
     /**
      * Shutdown Session and close the socket  
      */
     void Close();
 
+    bool AssignChatroom(size_t id);
+
+    bool LeaveChatroom();
+    
 private:
     
     void WriteSomeHandler(
@@ -81,8 +91,9 @@ private:
      */
     asio::ip::tcp::socket m_socket;
 
-    /// Session should communicate with server via protocol and predefined commands
     Server * const m_server { nullptr };
+
+    std::optional<size_t> m_chatroom { std::nullopt };
 
     asio::io_context::strand m_strand;
 

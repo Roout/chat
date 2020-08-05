@@ -4,6 +4,7 @@
 #include "RequestType.hpp"
 #include "InteractionStage.hpp"
 #include "Utility.hpp"
+#include "Chatroom.hpp"
 
 #include <functional>
 #include <iostream>
@@ -11,7 +12,7 @@
 
 Session::Session( 
     asio::ip::tcp::socket && socket, 
-    Server * server 
+    Server * const server 
 ) :
     m_socket { std::move(socket) },
     m_server { server },
@@ -65,23 +66,22 @@ void Session::Read() {
 }
 
 void Session::Close() {
-    m_isClosed = true;
-
     boost::system::error_code ec;
     m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     if(ec) { 
         m_server->Write(LogType::error, 
             "Session's socket called shutdown with error: ", ec.message(), '\n'
         );
+        ec.clear();
     }
-    ec.clear();
-    
     m_socket.close(ec);
     if(ec) {
         m_server->Write(LogType::error, 
             "Session's socket is being closed with error: ", ec.message(), '\n'
         );
     } 
+
+    m_isClosed = true;
 }
 
 void Session::ReadSomeHandler(
@@ -160,6 +160,24 @@ void Session::WriteSomeHandler(
         );
         this->Close();
     }
+}
+
+bool Session::AssignChatroom(size_t id) {
+    const bool result = m_server->AssignChatroom(id, shared_from_this());
+    if( result ) {
+        m_chatroom.emplace(id);
+    }
+    return result;
+}
+
+bool Session::LeaveChatroom() {
+    // leave current chatroom if exist
+    if(m_chatroom.has_value()) {
+        m_server->LeaveChatroom(*m_chatroom, shared_from_this());
+        m_chatroom.reset();
+        return true;
+    }
+    return false;
 }
 
 bool Session::ValidateAuth(const Requests::Request& request) const noexcept {
