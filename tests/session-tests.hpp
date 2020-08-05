@@ -60,6 +60,10 @@ protected:
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
 };
 
+/**
+ * Client connect ->
+ * Server accept -> Server send welcome message
+ */
 TEST_F(TCPInteractionTest, OnlyFixureSetup) {
     // prepare (done in ::SetUp method)
     // execute (done in ::SetUp method)
@@ -71,6 +75,12 @@ TEST_F(TCPInteractionTest, OnlyFixureSetup) {
         << "\nExpected: " << static_cast<size_t>(IStage::State::UNAUTHORIZED);
 }
 
+/**
+ * Client connect ->
+ * Server accept -> Server send welcome message ->
+ * Client send authorrize request ->
+ * Server read and response with confirmation  
+ */
 TEST_F(TCPInteractionTest, ClientAuthorization) {
     Requests::Request request{};
     request.SetType(Requests::RequestType::AUTHORIZE);
@@ -80,7 +90,7 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
     // send authorization request to server
     m_client->Write(request.Serialize());    
     // give 3 seconds for server - client communication
-    this->WaitFor(3'000);
+    this->WaitFor(25);
     
     // check results:
     EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
@@ -89,3 +99,39 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
         << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED);
 }
 
+TEST_F(TCPInteractionTest, AuthorizedRequestChatroomList) {
+    // TODO: 1. Server creates chatrooms
+
+    // 2. Complete authorization 
+    Requests::Request request{};
+    request.SetType(Requests::RequestType::AUTHORIZE);
+    request.SetName("Random Name #1");
+    request.SetBody("Testing authorization");
+    
+    // send authorization request to server
+    m_client->Write(request.Serialize());   
+    // give 0.025 seconds for server - client communication
+    this->WaitFor(25);
+    // make sure that authorization was completed
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
+    
+    // 3. Request chatroom list
+    Requests::Request listRequest{};
+    request.SetType(Requests::RequestType::LIST_CHATROOM);
+    request.SetName("Random Name #1");
+    request.SetBody("Testing chatroom list");
+    // send request to server
+    m_client->Write(request.Serialize());   
+    // give  0.025 seconds for server - client communication
+    this->WaitFor(25);
+
+    ///TODO: 4. Compare expected result and recieved response
+
+}
+
+TEST_F(TCPInteractionTest, UnauthorizedRequestChatroomList) {
+
+}
