@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set ( sources_files 
   "Server.cpp"
   "Session.cpp"
+  "Chatroom.cpp"
   "../classes/src/DoubleBuffer.cpp"
   "../classes/src/Request.cpp"
   "main.cpp"
@@ -13,6 +14,7 @@ set ( sources_files
 set ( header_files
   "Server.hpp"
   "Session.hpp"
+  "Chatroom.hpp"
   "../classes/include/Log.hpp"
   "../classes/include/DoubleBuffer.hpp"
   "../classes/include/RequestType.hpp"
