@@ -101,7 +101,10 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
 
 TEST_F(TCPInteractionTest, AuthorizedRequestChatroomList) {
     // TODO: 1. Server creates chatrooms
-
+    m_server->CreateChatroom("WoW 3.3.5a");
+    m_server->CreateChatroom("Dota 2");
+    m_server->CreateChatroom("Programming");
+    m_server->CreateChatroom("Chatting");
     // 2. Complete authorization 
     Requests::Request request{};
     request.SetType(Requests::RequestType::AUTHORIZE);
@@ -129,7 +132,24 @@ TEST_F(TCPInteractionTest, AuthorizedRequestChatroomList) {
     this->WaitFor(25);
 
     ///TODO: 4. Compare expected result and recieved response
+    const auto sourceChatList = m_server->GetChatroomList(); // chatroom list which has been sent
+    const auto aquiredChatList = m_client->GetGUI().GetBuffer(); // chatroom list which has been recieved united via '\n' symbol
+    // devide chatroom list
+    std::vector<std::string> resultList;
+    size_t start { 0 };
+    size_t finish = aquiredChatList.find('\n', start);
+    while( finish != std::string::npos ) {
+        resultList.emplace_back(aquiredChatList.substr(start, finish - start));
+        start = finish + 1;
+        finish = aquiredChatList.find('\n', start);
+    }
+    resultList.emplace_back(aquiredChatList.substr(start, std::string::npos));
 
+    // compare source and result
+    EXPECT_EQ(resultList.size(), sourceChatList.size());
+    for(size_t i = 0; i < resultList.size(); i++) {
+        EXPECT_EQ(resultList[i], sourceChatList[i]);
+    }
 }
 
 TEST_F(TCPInteractionTest, UnauthorizedRequestChatroomList) {

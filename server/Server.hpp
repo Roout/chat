@@ -18,6 +18,10 @@ public:
 
     void Shutdown();
     
+    std::vector<std::string> GetChatroomList() const noexcept;
+
+    void CreateChatroom(std::string name);
+    
 private:
     friend class Session;
 

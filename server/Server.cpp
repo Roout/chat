@@ -105,3 +105,15 @@ void Server::LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& se
     }
 }
 
+std::vector<std::string> Server::GetChatroomList() const noexcept {
+    std::vector<std::string> list;
+    list.reserve(m_chatrooms.size());
+    for(auto& chatroom : m_chatrooms) {
+        list.emplace_back(chatroom.GetRepresentation());
+    }
+    return list;
+}
+
+void Server::CreateChatroom(std::string name) {
+    m_chatrooms.emplace_back(std::move(name));
+}

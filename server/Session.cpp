@@ -215,7 +215,6 @@ std::string Session::SolveRequest(const Requests::Request& request) {
             } break;
         case IStage::State::AUTHORIZED : 
             { // process request
-                reply.SetType(Requests::RequestType::POST);
                 const auto expectedRequests {
                     Utils::CreateMask(
                         Requests::RequestType::LIST_CHATROOM,
@@ -225,16 +224,18 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                     )
                 };
                 if(Utils::EnumCast(request.GetType()) & expectedRequests) {
-                    /// TODO: solve base on request type
                     if(request.GetType() == Requests::RequestType::LIST_CHATROOM) {
-                        const std::string body {
-                            "Here goes list of avaible chatrooms:\n"
-                            "Test chatroom #1\n"
-                            "Test chatroom #2345"
-                        };
-                        reply.SetBody(body);    
+                        reply.SetType(Requests::RequestType::LIST_CHATROOM);
+                        std::string body {};
+                        for(auto& str: m_server->GetChatroomList()) {
+                            body += std::move(str);
+                            body.push_back('\n');
+                        }
+                        body.pop_back(); // last '\n'
+                        reply.SetBody(body);   
                     }
                 } else {
+                    reply.SetType(Requests::RequestType::POST);
                     const std::string body {
                         "Welcome! Is your name '" + request.GetName() + "'?\n"
                         "Sorry, but you send wrong request type.\n"
