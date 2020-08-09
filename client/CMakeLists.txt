@@ -11,6 +11,7 @@ set ( sources_files
 )
 set ( header_files
   "Client.hpp"
+  "GUI.hpp"
   "../classes/include/Log.hpp"
   "../classes/include/DoubleBuffer.hpp"
   "../classes/include/RequestType.hpp"

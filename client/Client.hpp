@@ -5,6 +5,7 @@
 #include "DoubleBuffer.hpp"
 #include "InteractionStage.hpp"
 #include "Log.hpp"
+#include "GUI.hpp"
 
 namespace asio = boost::asio;
 
@@ -29,6 +30,8 @@ public:
      */
     IStage::State GetStage() const noexcept;
 
+    inline const GUI& GetGUI() const noexcept; 
+    
 private:
 
     void Close();
@@ -82,4 +85,9 @@ private:
     Buffers         m_outbox;
     IStage::State   m_stage { IStage::State::DISCONNECTED };
 
+    GUI             m_gui;
 };
+
+inline const GUI& Client::GetGUI() const noexcept {
+    return m_gui;
+}

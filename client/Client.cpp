@@ -221,7 +221,7 @@ void Client::HandleRequest(const Requests::Request& request) {
         } break;
         case Requests::RequestType::LIST_CHATROOM:
         {
-            
+            m_gui.UpdateBuffer(request.GetBody());
         } break;
         default: break;
     }
