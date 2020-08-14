@@ -202,7 +202,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                     reply.SetBody(body);
                     m_state = IStage::State::AUTHORIZED;
                 } else { // send warning about wrong expected request 
-                    reply.SetType(Requests::RequestType::AUTHORIZE);
+                    reply.SetType(request.GetType());
                     reply.SetStage(IStage::State::UNAUTHORIZED);
                     reply.SetCode(Requests::ErrorCode::FAILURE);
                     const std::string body {
@@ -224,8 +224,9 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                     )
                 };
                 if(Utils::EnumCast(request.GetType()) & expectedRequests) {
+                    reply.SetType(Requests::RequestType::LIST_CHATROOM);
                     if(request.GetType() == Requests::RequestType::LIST_CHATROOM) {
-                        reply.SetType(Requests::RequestType::LIST_CHATROOM);
+                        reply.SetCode(Requests::ErrorCode::SUCCESS);
                         std::string body {};
                         for(auto& str: m_server->GetChatroomList()) {
                             body += std::move(str);
@@ -233,7 +234,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         }
                         body.pop_back(); // last '\n'
                         reply.SetBody(body);   
-                    }
+                    } 
                 } else {
                     reply.SetType(Requests::RequestType::POST);
                     const std::string body {
