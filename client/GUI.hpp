@@ -2,25 +2,26 @@
 #define CLIENT_GUI_HPP
 
 #include <iostream>
-#include <string>
+
+#include "Request.hpp"
 
 class GUI {
 public:
 
-    void UpdateBuffer(const std::string& buffer) {
-        m_buffer = buffer;
+    void UpdateRequest(Requests::Request&& request) {
+        m_request = std::move(request);
     }
 
     void Display() const {
-        std::cout << m_buffer << '\n';
+        std::cout << m_request.GetBody() << '\n';
     }
 
-    const std::string& GetBuffer() const {
-        return m_buffer;
+    const Requests::Request& GetRequest() const {
+        return m_request;
     }
 
 private:
-    std::string m_buffer;
+    Requests::Request m_request{};
 };
 
 #endif // CLIENT_GUI_HPP
