@@ -69,7 +69,7 @@ private:
      * base on it's type, status and interaction stage 
      * changes own state. 
      */
-    void HandleRequest(const Requests::Request&);
+    void HandleRequest(Requests::Request&&);
 
 private:
     

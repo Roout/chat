@@ -125,7 +125,7 @@ void Client::OnRead(
         );
 
         if( !result ) {
-            this->HandleRequest(incomingRequest);
+            this->HandleRequest(std::move(incomingRequest));
         } else {
             m_logger.Write( 
                 LogType::error, 
@@ -196,11 +196,11 @@ IStage::State Client::GetStage() const noexcept {
     return m_stage;
 }
 
-void Client::HandleRequest(const Requests::Request& request) {
+void Client::HandleRequest(Requests::Request&& request) {
     const auto type { request.GetType() };
     const auto result { request.GetCode() };
 
-    switch(request.GetType()) {
+    switch(type) {
         case Requests::RequestType::AUTHORIZE:
         { // it's reply on client's authorization request
             if( result == Requests::ErrorCode::SUCCESS ) {
@@ -220,8 +220,8 @@ void Client::HandleRequest(const Requests::Request& request) {
             }
         } break;
         case Requests::RequestType::LIST_CHATROOM:
-        {
-            m_gui.UpdateBuffer(request.GetBody());
+        {   
+            m_gui.UpdateRequest(std::move(request));
         } break;
         default: break;
     }
