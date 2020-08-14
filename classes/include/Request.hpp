@@ -26,6 +26,10 @@ namespace Requests {
 
         Request();
         
+        Request(Request&&); 
+        
+        Request& operator=(Request&&); 
+
         ~Request();
 
         void Reset();

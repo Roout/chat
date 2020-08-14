@@ -112,6 +112,11 @@ namespace Requests {
         
     Request::~Request() = default;
 
+    Request::Request(Request&&) = default;
+        
+    Request& Request::operator=(Request&&)  = default; 
+
+
     void Request::Reset() {
         m_impl->m_type = RequestType::UNDEFINED;
         m_impl->m_stage = IStage::State::DISCONNECTED;
