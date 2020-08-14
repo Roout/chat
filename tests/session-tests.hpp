@@ -180,3 +180,10 @@ TEST_F(TCPInteractionTest, UnauthorizedRequestChatroomList) {
     EXPECT_EQ(recievedReqeuest.GetCode(), Requests::ErrorCode::FAILURE);
 
 }
+
+/**
+ * Thread safety tests:
+ * - [ ] Multiply clients trying to create the chatroom (maybe with the same name);
+ * - [ ] 
+ */
+
