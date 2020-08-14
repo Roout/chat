@@ -45,39 +45,37 @@ For now I solved (at least I think so) this problem using strand: I wrapped the 
 
 **Cons:**  
 
-- There advantage of the multiply threads almost gone. 
+- The advantage of the multiply threads almost gone. 
 With such design only `async_read` operation can be run parallel with `async_write` operation but their complection handlers can't! It's because there will be data race around `std::ostream` object
-if 2 completion handlers will be executed in one time. To sum up, all handlers are forced to go through
-one `boost::asio::strand`.
+if 2 completion handlers will be executed in one time. To sum up, all handlers are forced to go through one `boost::asio::strand`.
 
-- Also I wish that there Session or Client Write() function can be called from several threads at one point of time
+- Also I wish that there `Session` or `Client` `Write()` function can be called from several threads at one point of time
 and if the writing is going on it will just push to buffer text to be sent immediately **without queuing and going through strand one-by-one**.
 
--  I think I need at least to use other strand for reading operation as it can be used concurrently with writing operation. And may be `mutex` around `std::cout`.  
+-  I think I need at least to use other `strand` for reading operation as it can be used concurrently with writing operation. And may be `mutex` around `std::cout`.  
 
 **Pros**  
 
 - Very easy to implement.
 
 # TODO #2
-- [ ] remove server pointer from the session (will be achieved when I define communication protocol: request(client)-reply(server) and message structure).
+- [ ] can I remove server pointer from the session?
 - [x] reorganize work with buffers.
 
 # TODO #3
 - [ ] make copy of the project and apply cooroutings!
 
 # Expected result
-- [ ] simple protocol & parser for text messages
-    - [ ] define message structure
-    - [ ] define parser
+- [x] simple protocol & parser for text messages
+    - [x] define message structure
+    - [x] define parser
 - [ ] one chatroom with several users
     - [ ] it will broadcast if somebody joined
     - [ ] it will broadcast if somebody leave
     - [ ] timeouts with timers for the server to avoid server's abuse
     - [ ] force to choose username
     - [ ] add login/logout
-    - [ ] fix sequrity issues (ssl?)
-    - [ ] encryption?
+    - [ ] fix sequrity issues (ssl?); encryption?
 - [ ] support multithreading for server as there will be several clients who can write/read to/from 'chatroom'
 - [ ] implement some simple GUI for the clients
 - [ ] one client written on LUA

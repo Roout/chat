@@ -8,7 +8,7 @@ Dispatch -  may block the function where it was dispatched.
 The `dispatch()` function can be invoked from the current
 worker thread, while the `post()` function has to wait until the handler of the worker is complete
 before it can be invoked. In other words, the `dispatch()` function's events can be executed from the
-current worker thread even if there are other pending events queued up, while the post() function's
+current worker thread even if there are other pending events queued up, while the `post()` function's
 events have to wait until the handler completes the execution before being allowed to be executed.
 
 `io_context::poll()` - same as `run()` but execute only already READY handles => so no blocking used
