@@ -21,7 +21,7 @@ public:
     std::vector<std::string> GetChatroomList() const noexcept;
 
     size_t CreateChatroom(std::string name);
-    
+
 private:
     friend class Session;
 
@@ -31,10 +31,14 @@ private:
     bool AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& session);
 
     void LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& session);
-
+        
+    void RemoveChatroom(size_t chatroomId, bool mustClose);
+    
     size_t GetChatroom(const Session*const session) const noexcept;
 
-    bool ExistChatroom(size_t id) const noexcept;
+    bool ExistChatroom(size_t chatroomId) const noexcept;
+
+    bool IsEmpty(size_t chatroomId) const noexcept;
 
     template<class ...Args>
     void Write(const LogType ty, Args&& ...args);

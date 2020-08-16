@@ -148,3 +148,21 @@ bool Server::ExistChatroom(size_t id) const noexcept {
         return rhs.GetId() == id;
     }) != m_chatrooms.cend());
 }
+
+void Server::RemoveChatroom(size_t chatroomId, bool mustClose) {
+    const auto it = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const chat::Chatroom& rhs){
+        return rhs.GetId() == chatroomId;
+    });
+    if( it != m_chatrooms.end() ) {
+        if( mustClose ) it->Close();
+        *it = std::move(m_chatrooms.back());
+        m_chatrooms.pop_back();
+    }
+}
+
+bool Server::IsEmpty(size_t chatroomId) const noexcept {
+    const auto it = std::find_if(m_chatrooms.cbegin(), m_chatrooms.cend(), [chatroomId](const chat::Chatroom& rhs) {
+        return rhs.GetId() == chatroomId;
+    });
+    return (it == m_chatrooms.cend() || it->IsEmpty());
+}
