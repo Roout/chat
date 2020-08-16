@@ -227,6 +227,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                 };
                 if(Utils::EnumCast(request.GetType()) & expectedRequests) {
                     reply.SetType(request.GetType());
+                    reply.SetStage(IStage::State::AUTHORIZED);
                     if(request.GetType() == Requests::RequestType::LIST_CHATROOM) {
                         reply.SetCode(Requests::ErrorCode::SUCCESS);
                         std::string body {};
@@ -236,22 +237,19 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         }
                         body.pop_back(); // last '\n'
                         reply.SetBody(body);   
-                    } else if(request.GetType() == Requests::RequestType::JOIN_CHATROOM ) {
+                    } 
+                    else if(request.GetType() == Requests::RequestType::JOIN_CHATROOM ) {
                         std::array<std::function<bool()>, 4> testTable;
-                        // Was id included to request?
-                        testTable[0] = [&request]() {
+                        testTable[0] = [&request]() { // Was id included to request?
                             return (request.GetChatroom() != 0U);
                         };
-                        // Is the user in the `hall` chatroom?
-                        testTable[1] = [this]() {
+                        testTable[1] = [this]() { // Is the user in the `hall` chatroom?
                             return m_server->m_hall.Contains(this);
                         };
-                        // Did a chatroom with given id exist?
-                        testTable[2] = [this, &request]() {
+                        testTable[2] = [this, &request]() { // Did a chatroom with given id exist?
                             return m_server->ExistChatroom(request.GetChatroom());
                         };
-                        // Are there any free space for new user?
-                        testTable[3] = [this, &request]() {
+                        testTable[3] = [this, &request]() { // Are there any free space for new user?
                             // return true, if chatroom was joined successfully 
                             // otherwise return false. Which means that the chatroom is most likely full.
                             return m_server->AssignChatroom(request.GetChatroom(), this->shared_from_this());
@@ -273,11 +271,46 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                             case 4: errorMessage = "No free space in the room"; break;
                             default: errorMessage = "Some weird error, sorry!"; break;
                         }
+                        if( !errorCode ) {
+                            reply.SetChatroom(request.GetChatroom());
+                            reply.SetName(request.GetName());
+                        }
                         reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
-                        reply.SetStage(IStage::State::AUTHORIZED);
+                        reply.SetBody(errorMessage);
+                    } 
+                    else if(request.GetType() == Requests::RequestType::CREATE_CHATROOM ) {
+                        size_t errorCode { 0 };
+                        if(!m_server->m_hall.Contains(this)) {
+                            errorCode = 1;
+                        } 
+                        else if (request.GetName().empty()) {
+                            errorCode = 2;
+                        }
+                        std::string errorMessage {};
+                        switch(errorCode) {
+                            case 0: errorMessage = "You've successfully create and joined the chatroom"; break;
+                            case 1: errorMessage = "User is already in the chatroom"; break;
+                            case 2: errorMessage = "Room's name is empty!"; break;
+                            default: errorMessage = "Some weird error, sorry!"; break;
+                        }
+                        if( !errorCode ) {
+                            // create room
+                            const auto id = m_server->CreateChatroom(request.GetName());
+                            // add to this room
+                            const auto result = m_server->AssignChatroom(id, this->shared_from_this());
+                            if (!result) {
+                                // Some weird error, need to check is it even possible.
+                                // I think it should only throw exceptions as it's impossible to fail adding
+                                // user to empty room.
+                            }
+                            reply.SetChatroom(id);
+                            reply.SetName(request.GetName());
+                        }
+                        reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
                         reply.SetBody(errorMessage);
                     }
-                } else {
+                } 
+                else {
                     reply.SetType(Requests::RequestType::POST);
                     const std::string body {
                         "Welcome! Is your name '" + request.GetName() + "'?\n"
