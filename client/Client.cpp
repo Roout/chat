@@ -231,6 +231,10 @@ void Client::HandleRequest(Requests::Request&& request) {
         {
             m_gui.UpdateRequest(std::move(request));
         } break;
+        case Requests::RequestType::LEAVE_CHATROOM:
+        {
+            m_gui.UpdateRequest(std::move(request));
+        } break;
         
         default: break;
     }
