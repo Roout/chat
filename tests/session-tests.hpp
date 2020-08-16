@@ -321,7 +321,57 @@ TEST_F(TCPInteractionTest, AuthorizedCreateChatroomRequest) {
 
 // Requests::RequestType::LEAVE_CHATROOM 
 TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    
+    // #0 Create other chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    const auto desiredChatroomId = m_server->CreateChatroom(desiredChatroomName); 
+    
+    // #1 Complete authorization
+    Requests::Request request{};
+    request.SetType(Requests::RequestType::AUTHORIZE);
+    // send authorization request to server
+    m_client->Write(request.Serialize());    
+    // give 25ms for server - client communication
+    this->WaitFor(25);
+    // check results:
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
+    
+    // #2 Join Chatroom
+    request.Reset();
+    request.SetType(Requests::RequestType::JOIN_CHATROOM);
+    request.SetChatroom(desiredChatroomId);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
 
+    // #3 save chatroom count
+    size_t chatroomCountBefore { m_server->GetChatroomList().size() };
+
+    // #4 Leave Chatroom
+    request.Reset();
+    request.SetType(Requests::RequestType::LEAVE_CHATROOM);
+    request.SetChatroom(desiredChatroomId);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
+
+    // #5 compare number of chatrooms before and after leave
+    size_t chatroomCountAfter { m_server->GetChatroomList().size() };
+    EXPECT_NE(chatroomCountAfter, chatroomCountBefore);
+
+    const auto& joinReply = m_client->GetGUI().GetRequest();
+
+    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::LEAVE_CHATROOM);
+    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS);
+    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
 }
 
 /** TODO:
