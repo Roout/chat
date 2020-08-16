@@ -7,6 +7,8 @@
 #include "Chatroom.hpp"
 
 #include <functional>
+#include <array>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 
@@ -219,12 +221,12 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                     Utils::CreateMask(
                         Requests::RequestType::LIST_CHATROOM,
                         Requests::RequestType::JOIN_CHATROOM,
-                        Requests::RequestType::ABOUT_CHATROOM,
-                        Requests::RequestType::CREATE_CHATROOM
+                        Requests::RequestType::CREATE_CHATROOM,
+                        Requests::RequestType::LEAVE_CHATROOM
                     )
                 };
                 if(Utils::EnumCast(request.GetType()) & expectedRequests) {
-                    reply.SetType(Requests::RequestType::LIST_CHATROOM);
+                    reply.SetType(request.GetType());
                     if(request.GetType() == Requests::RequestType::LIST_CHATROOM) {
                         reply.SetCode(Requests::ErrorCode::SUCCESS);
                         std::string body {};
@@ -234,7 +236,47 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         }
                         body.pop_back(); // last '\n'
                         reply.SetBody(body);   
-                    } 
+                    } else if(request.GetType() == Requests::RequestType::JOIN_CHATROOM ) {
+                        std::array<std::function<bool()>, 4> testTable;
+                        // Was id included to request?
+                        testTable[0] = [&request]() {
+                            return (request.GetChatroom() != 0U);
+                        };
+                        // Is the user in the `hall` chatroom?
+                        testTable[1] = [this]() {
+                            return m_server->m_hall.Contains(this);
+                        };
+                        // Did a chatroom with given id exist?
+                        testTable[2] = [this, &request]() {
+                            return m_server->ExistChatroom(request.GetChatroom());
+                        };
+                        // Are there any free space for new user?
+                        testTable[3] = [this, &request]() {
+                            // return true, if chatroom was joined successfully 
+                            // otherwise return false. Which means that the chatroom is most likely full.
+                            return m_server->AssignChatroom(request.GetChatroom(), this->shared_from_this());
+                        };
+
+                        size_t errorCode { 0 };
+                        for(size_t test = 0; test < testTable.size(); test++) {
+                            if( !std::invoke(testTable[test]) ) {
+                                errorCode = test + 1;
+                                break;
+                            }
+                        }
+                        std::string errorMessage {};
+                        switch(errorCode) {
+                            case 0: errorMessage = "You've successfully joined the chatroom"; break;
+                            case 1: errorMessage = "ID wasn't included to the request"; break; 
+                            case 2: errorMessage = "User is already in the chatroom"; break;
+                            case 3: errorMessage = "Can't find room with given id"; break; 
+                            case 4: errorMessage = "No free space in the room"; break;
+                            default: errorMessage = "Some weird error, sorry!"; break;
+                        }
+                        reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
+                        reply.SetStage(IStage::State::AUTHORIZED);
+                        reply.SetBody(errorMessage);
+                    }
                 } else {
                     reply.SetType(Requests::RequestType::POST);
                     const std::string body {
@@ -243,7 +285,6 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         "Try to submit one of those request:\n"
                         "--list-chatroom\n"
                         "--join-chatroom\n"
-                        "--about-chatroom\n"
                         "--create-chatroom"
                     };
                     reply.SetBody(body);    
@@ -251,7 +292,6 @@ std::string Session::SolveRequest(const Requests::Request& request) {
             }
             break;
         case IStage::State::BUSY : 
-            // asio::post(m_strand, std::bind(&Server::BroadcastEveryoneExcept, m_server, msg, this->shared_from_this()));
             break;
         default: break;
     };
