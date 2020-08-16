@@ -309,6 +309,46 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
                         reply.SetBody(errorMessage);
                     }
+                    else if(request.GetType() == Requests::RequestType::LEAVE_CHATROOM ) {
+                        std::array<std::function<bool()>, 3> testTable;
+                        testTable[0] = [&request]() {  // Does request have id?
+                            return (request.GetChatroom() != 0U);
+                        };
+                        testTable[1] = [this, &request]() { // Does this chatroom exist?
+                            return m_server->ExistChatroom(request.GetChatroom());
+                        };
+                        testTable[2] = [this, &request]() { // Does session belong to this chatroom?
+                            return m_server->GetChatroom(this) == request.GetChatroom();
+                        };
+                        
+                        size_t errorCode { 0 };
+                        for(size_t test = 0; test < testTable.size(); test++) {
+                            if( !std::invoke(testTable[test]) ) {
+                                errorCode = test + 1;
+                                break;
+                            }
+                        }
+                        std::string errorMessage {};
+                        switch(errorCode) {
+                            case 0: errorMessage = "You've successfully leave the chatroom"; break;
+                            case 1: errorMessage = "ID wasn't included to the request"; break; 
+                            case 2: errorMessage = "Can't find room with given id"; break; 
+                            case 3: errorMessage = "Session doesn't belong to this chatroom"; break;
+                            default: errorMessage = "Some weird error, sorry!"; break;
+                        }
+                        if( !errorCode ) {
+                            // leave chatroom & join hall!
+                            const auto chatroomId = request.GetChatroom();
+                            m_server->LeaveChatroom(chatroomId, this->shared_from_this());
+                            // if chatroom is empty -> remove it
+                            if( m_server->IsEmpty(chatroomId) ) {
+                                const bool closeConnections { false };
+                                m_server->RemoveChatroom(chatroomId, closeConnections);
+                            }
+                        }
+                        reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
+                        reply.SetBody(errorMessage);
+                    }
                 } 
                 else {
                     reply.SetType(Requests::RequestType::POST);
@@ -318,7 +358,8 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         "Try to submit one of those request:\n"
                         "--list-chatroom\n"
                         "--join-chatroom\n"
-                        "--create-chatroom"
+                        "--create-chatroom\n"
+                        "--leave-chatroom"
                     };
                     reply.SetBody(body);    
                 }
