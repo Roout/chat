@@ -99,7 +99,7 @@ TEST_F(TCPInteractionTest, ClientAuthorization) {
         << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED);
 }
 
-TEST_F(TCPInteractionTest, AuthorizedRequestChatroomList) {
+TEST_F(TCPInteractionTest, AuthorizedChatroomListRequest) {
     /// 1. Server creates chatrooms
     m_server->CreateChatroom("WoW 3.3.5a");
     m_server->CreateChatroom("Dota 2");
@@ -151,7 +151,7 @@ TEST_F(TCPInteractionTest, AuthorizedRequestChatroomList) {
     }
 }
 
-TEST_F(TCPInteractionTest, UnauthorizedRequestChatroomList) {
+TEST_F(TCPInteractionTest, UnauthorizedChatroomListRequest) {
     /// 1. Server creates chatrooms
     m_server->CreateChatroom("WoW 3.3.5a");
     m_server->CreateChatroom("Dota 2");
@@ -181,9 +181,92 @@ TEST_F(TCPInteractionTest, UnauthorizedRequestChatroomList) {
 
 }
 
-/**
+// Requests::RequestType::JOIN_CHATROOM for already existing chatrooms
+TEST_F(TCPInteractionTest, AuthorizedJoinChatroomRequest) {
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    // #0 Create chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    m_server->CreateChatroom(desiredChatroomName); 
+    // #1 Complete authorization
+    Requests::Request request{};
+    request.SetType(Requests::RequestType::AUTHORIZE);
+    request.SetName("Authorized Join Chatroom Request");
+    
+    // send authorization request to server
+    m_client->Write(request.Serialize());    
+    // give 3 seconds for server - client communication
+    this->WaitFor(25);
+    
+    // check results:
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
+    
+    // #2 Get current chatroom list
+    request.Reset();
+    request.SetType(Requests::RequestType::LIST_CHATROOM);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
+    // confirm that there is a successfull reply
+    const auto& listReply = m_client->GetGUI().GetRequest();
+    EXPECT_EQ(listReply.GetCode(), Requests::ErrorCode::SUCCESS);
+    const auto& chatroomList = listReply.GetBody();
+    
+    // #3 Extract desired chatroom ID
+    const auto namePos = chatroomList.find(desiredChatroomName);
+    EXPECT_NE(namePos, std::string::npos) 
+        << "Can't find: " << desiredChatroomName;
+    // Chatroom string representation is in json format: { "id": .., "name": "..", "users": .. }
+    const auto idTagPos = chatroomList.rfind("id", namePos);
+    EXPECT_NE(idTagPos, std::string::npos) 
+        << "Can't find id for: " << desiredChatroomName;
+    
+    // Extract id
+    const auto idStart = chatroomList.find(':', idTagPos);
+    const auto idEnd = chatroomList.find(',', idStart);
+    
+    EXPECT_NE(idStart, std::string::npos);
+    EXPECT_NE(idEnd, std::string::npos);
+    
+    const auto idRep =  chatroomList.substr(idStart + 1, idEnd - idStart - 1);
+    const auto id = std::stoi(idRep);
+
+    // #4 Join Chatroom
+    request.Reset();
+    request.SetType(Requests::RequestType::JOIN_CHATROOM);
+    request.SetChatroom(id);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
+
+    // #5 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetRequest();
+
+    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS) 
+        << "Server deni access to the chatroom: " << desiredChatroomName 
+        << " with id: " << id;
+    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
+}
+
+// Requests::RequestType::CREATE_CHATROOM create and join new chatroom.
+TEST_F(TCPInteractionTest, AuthorizedCreateChatroomRequest) {
+
+}
+
+// Requests::RequestType::LEAVE_CHATROOM 
+TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
+
+}
+
+/** TODO:
  * Thread safety tests:
  * - [ ] Multiply clients trying to create the chatroom (maybe with the same name);
  * - [ ] 
  */
-
