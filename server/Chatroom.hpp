@@ -12,6 +12,8 @@ namespace chat {
 
     class Chatroom {
     public:
+        static constexpr size_t NO_ROOM { 0 };
+
         Chatroom();
 
         Chatroom(const std::string & name);
@@ -33,6 +35,8 @@ namespace chat {
         [[nodiscard]] bool AddSession(const std::shared_ptr<Session>& session);
 
         [[nodiscard]] bool RemoveSession(const Session * const session);
+
+        [[nodiscard]] bool Contains(const Session * const session) const noexcept;
 
         [[nodiscard]] std::string GetRepresentation() const;
 

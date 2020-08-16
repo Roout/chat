@@ -16,7 +16,7 @@ namespace chat {
         std::array<std::shared_ptr<Session>, MAX_CONNECTIONS> m_sessions;
         
     private:
-        inline static size_t m_instances { 0 };
+        inline static size_t m_instances { Chatroom::NO_ROOM };
     };
 
     Chatroom::Impl::Impl() : 
@@ -89,10 +89,21 @@ bool chat::Chatroom::RemoveSession(const Session * const session) {
     return false;
 }
 
+bool chat::Chatroom::Contains(const Session * const session) const noexcept {
+    for(const auto& s: m_impl->m_sessions) {
+        if( s.get() == session ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 std::string chat::Chatroom::GetRepresentation() const {
-    std::string view = "id: " + std::to_string(m_impl->m_id)
-        + " name: " + m_impl->m_name
-        + " users: " + std::to_string(this->GetSessionCount());
+    std::string view = "{ \"id\": " + std::to_string(m_impl->m_id)
+        + ", \"name\": \"" + m_impl->m_name + "\""
+        + ", \"users\": " + std::to_string(this->GetSessionCount()) 
+        + " }";
     return view;
 } 
 
