@@ -79,7 +79,15 @@ bool Server::AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& s
     // if chatroom is found then try to assign session to chatroom
     if( chat != m_chatrooms.end() ) {
         // if chatroom was assigned successfully return true otherwise false
-        return chat->AddSession(session);
+        if( chat->AddSession(session) ) {
+            return true;
+        } 
+        else { // failed to join chatroom, go back to hall
+            const auto result = m_hall.AddSession(session);
+            if( !result ) {
+                // some weird error!
+            }
+        }
     }
     return false;
 }
@@ -116,4 +124,26 @@ std::vector<std::string> Server::GetChatroomList() const noexcept {
 
 void Server::CreateChatroom(std::string name) {
     m_chatrooms.emplace_back(std::move(name));
+}
+
+size_t Server::GetChatroom(const Session*const session) const noexcept {
+    // check the hall
+    if( m_hall.Contains(session) ) {
+        return m_hall.GetId();
+    }
+    // check user's chatrooms
+    for(const auto& room: m_chatrooms) {
+        if( room.Contains(session) ) {
+            return room.GetId();
+        }
+    }
+
+    return chat::Chatroom::NO_ROOM;
+}
+
+
+bool Server::ExistChatroom(size_t id) const noexcept {
+    return (std::find_if(m_chatrooms.cbegin(), m_chatrooms.cend(), [id](const chat::Chatroom& rhs){
+        return rhs.GetId() == id;
+    }) != m_chatrooms.cend());
 }

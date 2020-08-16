@@ -32,6 +32,10 @@ private:
 
     void LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& session);
 
+    size_t GetChatroom(const Session*const session) const noexcept;
+
+    bool ExistChatroom(size_t id) const noexcept;
+
     template<class ...Args>
     void Write(const LogType ty, Args&& ...args);
 
