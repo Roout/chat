@@ -20,6 +20,8 @@ namespace chat {
 
         Chatroom(Chatroom&&chatroom);
 
+        Chatroom & operator=(Chatroom&&rhs);
+
         ~Chatroom();
 
         void Close();
@@ -27,6 +29,8 @@ namespace chat {
         [[nodiscard]] size_t GetId() const noexcept;
 
         [[nodiscard]] size_t GetSessionCount() const noexcept;
+
+        [[nodiscard]] bool IsEmpty() const noexcept;
 
         /**
          * @return 

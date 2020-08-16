@@ -42,9 +42,9 @@ chat::Chatroom::Chatroom(const std::string & name) :
 {
 }
 
-chat::Chatroom::Chatroom(chat::Chatroom&&rhs):
-    m_impl { std::move(rhs.m_impl) }
-{}
+chat::Chatroom::Chatroom(chat::Chatroom&&rhs) = default;
+
+chat::Chatroom & chat::Chatroom::operator=(Chatroom&&rhs) = default;
 
 chat::Chatroom::~Chatroom() = default;
 
@@ -96,6 +96,10 @@ bool chat::Chatroom::Contains(const Session * const session) const noexcept {
         }
     }
     return false;
+}
+
+bool chat::Chatroom::IsEmpty() const noexcept {
+    return !this->GetSessionCount();
 }
 
 
