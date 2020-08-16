@@ -122,8 +122,9 @@ std::vector<std::string> Server::GetChatroomList() const noexcept {
     return list;
 }
 
-void Server::CreateChatroom(std::string name) {
+size_t Server::CreateChatroom(std::string name) {
     m_chatrooms.emplace_back(std::move(name));
+    return m_chatrooms.back().GetId();
 }
 
 size_t Server::GetChatroom(const Session*const session) const noexcept {

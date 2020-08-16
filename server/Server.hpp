@@ -20,7 +20,7 @@ public:
     
     std::vector<std::string> GetChatroomList() const noexcept;
 
-    void CreateChatroom(std::string name);
+    size_t CreateChatroom(std::string name);
     
 private:
     friend class Session;
