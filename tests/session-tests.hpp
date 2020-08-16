@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <thread>
+#include <regex>
 
 class TCPInteractionTest : public ::testing::Test {
 protected:
@@ -253,11 +254,69 @@ TEST_F(TCPInteractionTest, AuthorizedJoinChatroomRequest) {
         << "Server deni access to the chatroom: " << desiredChatroomName 
         << " with id: " << id;
     EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
+    EXPECT_EQ(joinReply.GetChatroom(), id);
 }
 
 // Requests::RequestType::CREATE_CHATROOM create and join new chatroom.
 TEST_F(TCPInteractionTest, AuthorizedCreateChatroomRequest) {
+    // #0 Create chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    // #1 Complete authorization
+    Requests::Request request{};
+    request.SetType(Requests::RequestType::AUTHORIZE);
+    request.SetName("Authorized Join Chatroom Request");
+    
+    // send authorization request to server
+    m_client->Write(request.Serialize());    
+    // give 3 seconds for server - client communication
+    this->WaitFor(25);
+    
+    // check results:
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
 
+    // #2 Create Chatroom
+    const std::string roomName { "Room for testing a room creation via client's request" };
+    request.Reset();
+    request.SetType(Requests::RequestType::CREATE_CHATROOM);
+    request.SetName(roomName);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
+
+    // #3 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetRequest();
+
+    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::CREATE_CHATROOM);
+    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS) 
+        << "Server forbid creating chatrooms";
+    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
+    EXPECT_EQ(joinReply.GetName(), roomName);
+
+    // #4 Confirm number of users in this room & it's existence;
+    int usersCount { -1 };
+    const auto chatrooms { m_server->GetChatroomList() };
+    // find just created chatroom
+    // { "id": 2, "name": "some long name", "users": 1 } 
+    const std::regex rx { ".+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
+    std::smatch match;
+    for(const auto& room: chatrooms) {
+        EXPECT_TRUE(std::regex_match(room,  match, rx));
+        // The first sub_match is the whole string; the next
+        // sub_match is the first parenthesized expression.
+        const auto name { match[1].str() };
+        if( name == roomName ) {
+            usersCount = std::stoi(match[2].str());
+            break;
+        }
+    } 
+    EXPECT_EQ(usersCount, 1) 
+        << "Either some weird error occured either room doesn't exist!";
 }
 
 // Requests::RequestType::LEAVE_CHATROOM 
