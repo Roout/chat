@@ -4,13 +4,18 @@
 namespace chat {
     
     struct Chatroom::Impl {
-
+        /// Lifetime management
         Impl();
 
         Impl(const std::string& name );
+    
+    public:
+        /// Data members
+        const size_t    m_id { 0 };
 
-        const size_t m_id { 0 };
-        std::string m_name {};
+        std::string     m_name {};
+
+        size_t          m_users { 0 };
 
         static constexpr size_t MAX_CONNECTIONS { 256 };
         std::array<std::shared_ptr<Session>, MAX_CONNECTIONS> m_sessions;
@@ -60,9 +65,7 @@ size_t chat::Chatroom::GetId() const noexcept {
 } 
 
 size_t chat::Chatroom::GetSessionCount() const noexcept {
-    size_t count { 0 };
-    for(auto& s: m_impl->m_sessions) if (s) count++;
-    return count;
+    return m_impl->m_users;
 }
 
 /**
@@ -73,6 +76,7 @@ bool chat::Chatroom::AddSession(const std::shared_ptr<Session>& session) {
     for(auto& s: m_impl->m_sessions) {
         if( !s ) {
             s = session;
+            m_impl->m_users++;
             return true;
         }
     }
@@ -83,6 +87,7 @@ bool chat::Chatroom::RemoveSession(const Session * const session) {
     for(auto& s: m_impl->m_sessions) {
         if( s.get() == session ) {
             s.reset();
+            m_impl->m_users--;
             return true;
         }
     }
