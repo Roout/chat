@@ -222,6 +222,7 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                         Requests::RequestType::LIST_CHATROOM,
                         Requests::RequestType::JOIN_CHATROOM,
                         Requests::RequestType::CREATE_CHATROOM,
+                        Requests::RequestType::ABOUT_CHATROOM,
                         Requests::RequestType::LEAVE_CHATROOM
                     )
                 };
@@ -345,6 +346,29 @@ std::string Session::SolveRequest(const Requests::Request& request) {
                                 const bool closeConnections { false };
                                 m_server->RemoveChatroom(chatroomId, closeConnections);
                             }
+                        }
+                        reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
+                        reply.SetBody(errorMessage);
+                    }
+                    else { // about chatroom
+                        size_t errorCode { 0 };
+                        const auto chatroomId = request.GetChatroom();
+
+                        if( chatroomId == chat::Chatroom::NO_ROOM) {
+                            // Request has room's id
+                            errorCode = 1;
+                        } 
+                        else if( !m_server->ExistChatroom(chatroomId) ) {
+                            // Chatroom doesn't exist
+                            errorCode = 2;
+                        }
+
+                        std::string errorMessage {};
+                        switch(errorCode) {
+                            case 0: errorMessage = m_server->m_chatrooms.at(chatroomId).GetRepresentation(); break;
+                            case 1: errorMessage = "User is already in the chatroom"; break;
+                            case 2: errorMessage = "Chatroom doesn't exist"; break;
+                            default: errorMessage = "Some weird error, sorry!"; break;
                         }
                         reply.SetCode(errorCode? Requests::ErrorCode::FAILURE: Requests::ErrorCode::SUCCESS);
                         reply.SetBody(errorMessage);
