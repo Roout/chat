@@ -319,6 +319,55 @@ TEST_F(TCPInteractionTest, AuthorizedCreateChatroomRequest) {
         << "Either some weird error occured either room doesn't exist!";
 }
 
+// Requests::RequestType::ABOUT_CHATROOM 
+TEST_F(TCPInteractionTest, AuthorizedAboutChatroomRequest) {
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    // #0 Create other chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    const auto desiredChatroomId = m_server->CreateChatroom(desiredChatroomName); 
+
+    // #1 Complete authorization
+    Requests::Request request{};
+    request.SetType(Requests::RequestType::AUTHORIZE);
+    // send authorization request to server
+    m_client->Write(request.Serialize());    
+    // give 25ms for server - client communication
+    this->WaitFor(25);
+    // check results:
+    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
+        << "Problems with Fixure initialization occured: "
+        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
+        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
+    
+    // #2 Get chatroom info
+    request.Reset();
+    request.SetType(Requests::RequestType::ABOUT_CHATROOM);
+    request.SetChatroom(desiredChatroomId);
+    // send request
+    m_client->Write(request.Serialize());   
+    // wait 25ms for answer
+    this->WaitFor(25);
+
+    const auto& reply = m_client->GetGUI().GetRequest();
+    // check reply state
+    EXPECT_EQ(reply.GetType(), Requests::RequestType::ABOUT_CHATROOM);
+    EXPECT_EQ(reply.GetCode(), Requests::ErrorCode::SUCCESS);
+    EXPECT_EQ(reply.GetStage(), IStage::State::AUTHORIZED);
+
+    int expectedUsersCount { 0 };
+
+    const std::regex rx { ".+\"id\":[ ]*(\\d+).+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
+    std::smatch match;
+
+    EXPECT_TRUE(std::regex_match(reply.GetBody(), match, rx));
+
+    EXPECT_EQ(desiredChatroomId,    std::stoi(match[1].str()));
+    EXPECT_EQ(desiredChatroomName,  match[2].str());
+    EXPECT_EQ(expectedUsersCount,   std::stoi(match[3].str()));
+}
+
 // Requests::RequestType::LEAVE_CHATROOM 
 TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
