@@ -51,9 +51,6 @@ namespace {
             case IStage::State::AUTHORIZED:
                 result = "IStage::State::AUTHORIZED"; 
                 break;
-            case IStage::State::BUSY:
-                result = "IStage::State::BUSY"; 
-                break;
             default: break;
         }
         return result;

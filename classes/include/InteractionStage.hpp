@@ -23,10 +23,7 @@ namespace InteractionStage {
          * chatrooms.
          */
         AUTHORIZED,
-        /**
-         *  In this state client is busy chatting in the chatroom
-         */
-        BUSY,
+       
         COUNT
     };
 }
