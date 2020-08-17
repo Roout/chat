@@ -2,6 +2,7 @@
 #include <memory>
 #include <string>
 #include <optional>
+#include <unordered_map>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
 #include "Chatroom.hpp"
@@ -58,7 +59,7 @@ private:
     
     chat::Chatroom                          m_hall;
 
-    std::vector<chat::Chatroom>             m_chatrooms;
+    std::unordered_map<size_t, chat::Chatroom> m_chatrooms;
 
 };
 

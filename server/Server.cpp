@@ -12,7 +12,7 @@ Server::Server(std::shared_ptr<asio::io_context> context, std::uint16_t port) :
     m_acceptor { *m_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port) },
     m_hall { "unautherized users" }
 {
-    m_chatrooms.reserve(10);
+    m_chatrooms.reserve(40);
 }
 
 void Server::Start() {
@@ -64,7 +64,7 @@ void Server::Shutdown() {
     }
 
     m_hall.Close();
-    for(auto& chat: m_chatrooms) chat.Close();
+    for(auto& [id, chat]: m_chatrooms) chat.Close();
 }
 
 bool Server::AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& session) {
@@ -73,13 +73,11 @@ bool Server::AssignChatroom(size_t chatroomId, const std::shared_ptr<Session>& s
         // TODO: can't find session in chatroom for unAuth
     }
     // find chatroom with required id
-    const auto chat = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const auto& chatroom){
-        return chatroom.GetId() == chatroomId;
-    });
+    const auto chat = m_chatrooms.find(chatroomId);
     // if chatroom is found then try to assign session to chatroom
     if( chat != m_chatrooms.end() ) {
         // if chatroom was assigned successfully return true otherwise false
-        if( chat->AddSession(session) ) {
+        if( chat->second.AddSession(session) ) {
             return true;
         } 
         else { // failed to join chatroom, go back to hall
@@ -99,12 +97,10 @@ void Server::LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& se
         return;
     } 
     
-    const auto chat = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const auto& chatroom){
-        return chatroom.GetId() == chatroomId;
-    });
+    const auto chat = m_chatrooms.find(chatroomId);
 
     if( chat != m_chatrooms.end() ) {
-        if( chat->RemoveSession(session.get()) ) {
+        if( chat->second.RemoveSession(session.get()) ) {
             const auto isInHall = m_hall.AddSession(session);
             if( !isInHall ) {
                 /// TODO: some weird error
@@ -116,15 +112,17 @@ void Server::LeaveChatroom(size_t chatroomId, const std::shared_ptr<Session>& se
 std::vector<std::string> Server::GetChatroomList() const noexcept {
     std::vector<std::string> list;
     list.reserve(m_chatrooms.size());
-    for(auto& chatroom : m_chatrooms) {
+    for(auto& [id, chatroom] : m_chatrooms) {
         list.emplace_back(chatroom.GetRepresentation());
     }
     return list;
 }
 
 size_t Server::CreateChatroom(std::string name) {
-    m_chatrooms.emplace_back(std::move(name));
-    return m_chatrooms.back().GetId();
+    chat::Chatroom room { std::move(name) };
+    const size_t id { room.GetId() };
+    m_chatrooms.emplace(id, std::move(room));
+    return id;
 }
 
 size_t Server::GetChatroom(const Session*const session) const noexcept {
@@ -133,9 +131,9 @@ size_t Server::GetChatroom(const Session*const session) const noexcept {
         return m_hall.GetId();
     }
     // check user's chatrooms
-    for(const auto& room: m_chatrooms) {
+    for(const auto& [id, room]: m_chatrooms) {
         if( room.Contains(session) ) {
-            return room.GetId();
+            return id;
         }
     }
 
@@ -144,25 +142,18 @@ size_t Server::GetChatroom(const Session*const session) const noexcept {
 
 
 bool Server::ExistChatroom(size_t id) const noexcept {
-    return (std::find_if(m_chatrooms.cbegin(), m_chatrooms.cend(), [id](const chat::Chatroom& rhs){
-        return rhs.GetId() == id;
-    }) != m_chatrooms.cend());
+    return m_chatrooms.find(id) != m_chatrooms.cend();
 }
 
 void Server::RemoveChatroom(size_t chatroomId, bool mustClose) {
-    const auto it = std::find_if(m_chatrooms.begin(), m_chatrooms.end(), [chatroomId](const chat::Chatroom& rhs){
-        return rhs.GetId() == chatroomId;
-    });
+    const auto it = m_chatrooms.find(chatroomId);
     if( it != m_chatrooms.end() ) {
-        if( mustClose ) it->Close();
-        *it = std::move(m_chatrooms.back());
-        m_chatrooms.pop_back();
+        if( mustClose ) it->second.Close();
+        m_chatrooms.erase(it);
     }
 }
 
 bool Server::IsEmpty(size_t chatroomId) const noexcept {
-    const auto it = std::find_if(m_chatrooms.cbegin(), m_chatrooms.cend(), [chatroomId](const chat::Chatroom& rhs) {
-        return rhs.GetId() == chatroomId;
-    });
-    return (it == m_chatrooms.cend() || it->IsEmpty());
+    const auto it = m_chatrooms.find(chatroomId);
+    return (it == m_chatrooms.cend() || it->second.IsEmpty());
 }
