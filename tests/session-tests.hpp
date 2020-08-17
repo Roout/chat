@@ -406,7 +406,6 @@ TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
     // #4 Leave Chatroom
     request.Reset();
     request.SetType(Requests::RequestType::LEAVE_CHATROOM);
-    request.SetChatroom(desiredChatroomId);
     // send request
     m_client->Write(request.Serialize());   
     // wait 25ms for answer

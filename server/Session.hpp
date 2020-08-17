@@ -2,7 +2,6 @@
 #define SESSION_HPP
 
 #include <string>
-#include <optional>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
 #include "InteractionStage.hpp"
@@ -93,7 +92,7 @@ private:
 
     Server * const m_server { nullptr };
 
-    std::optional<size_t> m_chatroom { std::nullopt };
+    size_t m_chatroom;
 
     asio::io_context::strand m_strand;
 
