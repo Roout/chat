@@ -270,3 +270,6 @@ googletest/
 
 # all log files
 *.txt
+
+#rapidjson
+rapidjson/
