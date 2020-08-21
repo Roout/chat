@@ -19,7 +19,7 @@ namespace asio = boost::asio;
 class Buffers final {
 public:
 
-    Buffers(size_t reserved = 10);
+    Buffers(std::size_t reserved = 10);
 
     /**
      * Queue data to passibe buffer. 
@@ -31,7 +31,7 @@ public:
      */
     void SwapBuffers();
 
-    size_t GetQueueSize() const noexcept {
+    std::size_t GetQueueSize() const noexcept {
         return m_buffers[m_activeBuffer ^ 1].size();
     } 
 
@@ -56,7 +56,7 @@ private:
      */
     std::vector<asio::const_buffer> m_bufferSequence;
     
-    size_t m_activeBuffer { 0 };
+    std::size_t m_activeBuffer { 0 };
 };
 
 #endif // DOUBLE_BUFFER_HPP
