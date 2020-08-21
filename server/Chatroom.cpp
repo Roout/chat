@@ -1,6 +1,10 @@
 #include "Chatroom.hpp"
 #include "Session.hpp"
 
+#include "../rapidjson/document.h"
+#include "../rapidjson/writer.h"
+#include "../rapidjson/stringbuffer.h"
+
 namespace chat {
     
     struct Chatroom::Impl {
@@ -8,20 +12,20 @@ namespace chat {
         Impl();
 
         Impl(const std::string& name );
-    
+
     public:
         /// Data members
-        const size_t    m_id { 0 };
+        const std::size_t m_id { 0 };
 
-        std::string     m_name {};
+        std::string m_name {};
 
-        size_t          m_users { 0 };
+        std::size_t m_users { 0 };
 
-        static constexpr size_t MAX_CONNECTIONS { 256 };
+        static constexpr std::size_t MAX_CONNECTIONS { 256 };
         std::array<std::shared_ptr<Session>, MAX_CONNECTIONS> m_sessions;
         
     private:
-        inline static size_t m_instances { Chatroom::NO_ROOM };
+        inline static std::size_t m_instances { Chatroom::NO_ROOM };
     };
 
     Chatroom::Impl::Impl() : 
@@ -60,13 +64,18 @@ void chat::Chatroom::Close() {
 }
 
 
-size_t chat::Chatroom::GetId() const noexcept {
+std::size_t chat::Chatroom::GetId() const noexcept {
     return m_impl->m_id;
 } 
 
-size_t chat::Chatroom::GetSessionCount() const noexcept {
+std::size_t chat::Chatroom::GetSessionCount() const noexcept {
     return m_impl->m_users;
 }
+
+const std::string& chat::Chatroom::GetName() const noexcept {
+    return m_impl->m_name;
+}
+
 
 /**
  * @return 
@@ -107,13 +116,24 @@ bool chat::Chatroom::IsEmpty() const noexcept {
     return !this->GetSessionCount();
 }
 
+std::string chat::Chatroom::AsJSON() const {
+    rapidjson::Document doc;
+    doc.SetObject();
+    auto& allocator = doc.GetAllocator();
 
-std::string chat::Chatroom::GetRepresentation() const {
-    std::string view = "{ \"id\": " + std::to_string(m_impl->m_id)
-        + ", \"name\": \"" + m_impl->m_name + "\""
-        + ", \"users\": " + std::to_string(this->GetSessionCount()) 
-        + " }";
-    return view;
+    doc.AddMember("id", m_impl->m_id, allocator);
+
+    rapidjson::Value value;
+    value.SetString(m_impl->m_name.c_str(), allocator);
+    doc.AddMember("name", value, allocator);
+
+    doc.AddMember("users", this->GetSessionCount(), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    return buffer.GetString();
 } 
 
 void chat::Chatroom::Rename(const std::string& name) {
@@ -121,13 +141,13 @@ void chat::Chatroom::Rename(const std::string& name) {
 }
 
 void chat::Chatroom::Broadcast(const std::string& text) {
-    // remove closed sessions
-    for(auto& session: m_impl->m_sessions) {
-        if(session && session->IsClosed()) session.reset();
-    }
-
-    for(const auto& session: m_impl->m_sessions) {
-        session->Write(text);
+     for(auto& session: m_impl->m_sessions) {
+        if(session && session->IsClosed()) {
+            session.reset();
+        }
+        else if (session) {
+            session->Write(text);
+        }
     }
 }
 
@@ -135,13 +155,11 @@ void chat::Chatroom::Broadcast(
     const std::string& text, 
     std::function<bool(const Session&)> predicate
 ) {
-    // remove closed sessions
     for(auto& session: m_impl->m_sessions) {
-        if(session && session->IsClosed()) session.reset();
-    };
-
-    for(const auto& session: m_impl->m_sessions) {
-        if( std::invoke(predicate, *session) ) {
+        if(session && session->IsClosed()) {
+            session.reset();
+        }
+        else if ( session && std::invoke(predicate, *session) ) {
             session->Write(text);
         }
     }

@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <functional>
+#include <cstddef> // std::size_t 
 
 class Session;
 
@@ -12,7 +13,7 @@ namespace chat {
 
     class Chatroom {
     public:
-        static constexpr size_t NO_ROOM { 0 };
+        static constexpr std::size_t NO_ROOM { 0 };
 
         Chatroom();
 
@@ -26,9 +27,11 @@ namespace chat {
 
         void Close();
 
-        [[nodiscard]] size_t GetId() const noexcept;
+        [[nodiscard]] std::size_t GetId() const noexcept;
 
-        [[nodiscard]] size_t GetSessionCount() const noexcept;
+        [[nodiscard]] std::size_t GetSessionCount() const noexcept;
+
+        [[nodiscard]] const std::string& GetName() const noexcept;
 
         [[nodiscard]] bool IsEmpty() const noexcept;
 
@@ -42,7 +45,7 @@ namespace chat {
 
         [[nodiscard]] bool Contains(const Session * const session) const noexcept;
 
-        [[nodiscard]] std::string GetRepresentation() const;
+        [[nodiscard]] std::string AsJSON() const;
 
         void Rename(const std::string& name);
 
