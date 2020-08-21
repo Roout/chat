@@ -10,6 +10,10 @@ set(sources_files
 set(header_files
   "request-tests.hpp"
   "session-tests.hpp"
+
+  "../rapidjson/document.h"
+  "../rapidjson/writer.h"
+  "../rapidjson/stringbuffer.h"
 )
 
 enable_testing()
@@ -17,9 +21,10 @@ enable_testing()
 add_executable(${This} ${sources_files} ${header_files})
 
 target_include_directories(${This} 
-    PUBLIC "../classes/include"
+    PUBLIC "../classes"
     PUBLIC "../server"
     PUBLIC "../client"
+    PUBLIC "../rapidjson"
 )
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)

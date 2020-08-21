@@ -7,31 +7,39 @@ set ( sources_files
   "Server.cpp"
   "Session.cpp"
   "Chatroom.cpp"
-  "../classes/src/DoubleBuffer.cpp"
-  "../classes/src/Request.cpp"
+  "../classes/DoubleBuffer.cpp"
+  "../classes/Message.cpp"
+  "../classes/User.cpp"
   "main.cpp"
 )
 set ( header_files
+  "../classes/User.hpp"
+  "../classes/Log.hpp"
+  "../classes/DoubleBuffer.hpp"
+  "../classes/QueryType.hpp"
+  "../classes/Message.hpp"
+  "../classes/Utility.hpp"
+
   "Server.hpp"
   "Session.hpp"
   "Chatroom.hpp"
-  "../classes/include/Log.hpp"
-  "../classes/include/DoubleBuffer.hpp"
-  "../classes/include/RequestType.hpp"
-  "../classes/include/Request.hpp"
-  "../classes/include/Utility.hpp"
-  "../classes/include/InteractionStage.hpp"
+
+  "../rapidjson/document.h"
+  "../rapidjson/writer.h"
+  "../rapidjson/stringbuffer.h"
 )
 
-add_library(${This}_lib STATIC ${sources_files} ${header_files})
+add_library (${This}_lib STATIC ${sources_files} ${header_files})
 
 add_executable (${This} ${sources_files} ${header_files})
 
 target_include_directories(${This}
-  PUBLIC "../classes/include"
+  PUBLIC "../classes"
+  PUBLIC "../rapidjson"
 )
 target_include_directories(${This}_lib
-  PUBLIC "../classes/include"
+  PUBLIC "../classes"
+  PUBLIC "../rapidjson"
 )
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
@@ -49,5 +57,4 @@ if(Boost_FOUND)
   target_include_directories(${This}_lib 
     PUBLIC ${Boost_INCLUDE_DIRS} 
   )
-
 endif()

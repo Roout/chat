@@ -5,19 +5,22 @@ set(CMAKE_CXX_STANDARD 17)
 
 set ( sources_files 
   "Client.cpp"
-  "../classes/src/DoubleBuffer.cpp"
-  "../classes/src/Request.cpp"
+  "../classes/DoubleBuffer.cpp"
+  "../classes/Message.cpp"
   "main.cpp"
 )
 set ( header_files
   "Client.hpp"
   "GUI.hpp"
-  "../classes/include/Log.hpp"
-  "../classes/include/DoubleBuffer.hpp"
-  "../classes/include/RequestType.hpp"
-  "../classes/include/Request.hpp"
-  "../classes/include/InteractionStage.hpp"
-  "../classes/include/Utility.hpp"
+  "../classes/Log.hpp"
+  "../classes/DoubleBuffer.hpp"
+  "../classes/QueryType.hpp"
+  "../classes/Message.hpp"
+  "../classes/Utility.hpp"
+  
+  "../rapidjson/document.h"
+  "../rapidjson/writer.h"
+  "../rapidjson/stringbuffer.h"
 )
 
 add_library(${This}_lib STATIC ${sources_files} ${header_files})
@@ -25,11 +28,13 @@ add_library(${This}_lib STATIC ${sources_files} ${header_files})
 add_executable (${This} ${sources_files} ${header_files})
 
 target_include_directories(${This} 
-  PUBLIC "../classes/include"
+  PUBLIC "../classes"
+  PUBLIC "../rapidjson"
 )
 
 target_include_directories(${This}_lib 
-  PUBLIC "../classes/include"
+  PUBLIC "../classes"
+  PUBLIC "../rapidjson"
 )
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)

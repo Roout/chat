@@ -3,25 +3,34 @@
 
 #include <iostream>
 
-#include "Request.hpp"
+#include "Message.hpp"
 
 class GUI {
 public:
 
-    void UpdateRequest(Requests::Request&& request) {
-        m_request = std::move(request);
+    void UpdateResponse(Internal::Response&& response) {
+        m_response = std::move(response);
+    }
+
+    void UpdateChat(Internal::Chat&& chat) {
+        m_chat = std::move(chat);
     }
 
     void Display() const {
-        std::cout << m_request.GetBody() << '\n';
+        
     }
 
-    const Requests::Request& GetRequest() const {
-        return m_request;
+    const Internal::Response& GetResponse() const {
+        return m_response;
+    }
+
+    const Internal::Chat& GetChat() const {
+        return m_chat;
     }
 
 private:
-    Requests::Request m_request{};
+    Internal::Response m_response{};
+    Internal::Chat m_chat{};
 };
 
 #endif // CLIENT_GUI_HPP
