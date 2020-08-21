@@ -3,15 +3,11 @@
 #include <string>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
-#include "InteractionStage.hpp"
+#include "Message.hpp"
 #include "Log.hpp"
 #include "GUI.hpp"
 
 namespace asio = boost::asio;
-
-namespace Requests{
-    class Request;
-}
 
 class Client final {
 public:
@@ -24,11 +20,13 @@ public:
     
     void Write(std::string && text );
 
-    /**
-     * This function indicate stage which interaction between client and 
-     * server has already reached. 
-     */
-    IStage::State GetStage() const noexcept;
+    bool IsWaitingAck() const noexcept {
+        return m_state == State::WAIT_ACK;
+    }
+
+    bool IsAcknowleged() const noexcept {
+        return m_state == State::RECIEVE_ACK;
+    }
 
     inline const GUI& GetGUI() const noexcept; 
     
@@ -53,7 +51,7 @@ private:
      */
     void OnRead(
         const boost::system::error_code& error, 
-        size_t transferredBytes
+        std::size_t transferredBytes
     );
 
     /**
@@ -61,29 +59,48 @@ private:
      */
     void OnWrite(
         const boost::system::error_code& error, 
-        size_t transferredBytes
+        std::size_t transferredBytes
     );
 
     /**
-     * This function handle incoming requests and 
-     * base on it's type, status and interaction stage 
-     * changes own state. 
+     * This function handle incoming messages
      */
-    void HandleRequest(Requests::Request&&);
+    void HandleMessage(Internal::Message&);
+
+    void SendSynRequest();
 
 private:
-    
+    enum class State {
+        /**
+         * This state indicates that 
+         * client is closed or disconnected.  
+         */
+        CLOSED,
+        /**
+         * This state indicated that 
+         * client has sent SYN handshake to the 
+         * server and is waiting ACK response.
+         */
+        WAIT_ACK,
+        /**
+         * This state indicates that the client
+         * has already recieved ACK from the 
+         * server and server was acknowledged
+         * by the client.
+         */
+        RECIEVE_ACK
+    };
+
     Log             m_logger { "client_log.txt" };
     
     std::shared_ptr<asio::io_context>   m_io;
     asio::io_context::strand            m_strand;
     asio::ip::tcp::socket               m_socket;
     
-    bool            m_isClosed { false };
     bool            m_isWriting { false };
     asio::streambuf m_inbox;
     Buffers         m_outbox;
-    IStage::State   m_stage { IStage::State::DISCONNECTED };
+    State           m_state { State::CLOSED };
 
     GUI             m_gui;
 };

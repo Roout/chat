@@ -1,14 +1,23 @@
+#ifndef SESSION_TESTS_HPP
+#define SESSION_TESTS_HPP
+
 #include "gtest/gtest.h"
 #include "Server.hpp"
 #include "Session.hpp"
 #include "Client.hpp"
-#include "InteractionStage.hpp"
+#include "Utility.hpp"
+#include "QueryType.hpp"
 
 #include <memory>
 #include <thread>
 #include <regex>
+#include <cstddef>
 
-class TCPInteractionTest : public ::testing::Test {
+#include "../rapidjson/document.h"
+#include "../rapidjson/writer.h"
+#include "../rapidjson/stringbuffer.h"
+
+class BasicInteractionTest : public ::testing::Test {
 protected:
 
     void SetUp() override {
@@ -48,7 +57,7 @@ protected:
         }
     }   
 
-    void WaitFor(size_t ms) {
+    void WaitFor(std::size_t ms) {
         m_timer->expires_from_now(boost::posix_time::millisec(ms));
         m_timer->wait();
     }
@@ -63,363 +72,280 @@ protected:
 
 /**
  * Client connect ->
- * Server accept -> Server send welcome message
+ * Server accept -> Server waits for SYN
+ * Client send SYN ->
+ * Server recieve SYN and send ACK ->
+ * Client recieve ACK 
  */
-TEST_F(TCPInteractionTest, OnlyFixureSetup) {
+TEST_F(BasicInteractionTest, OnlyFixureSetup) {
     // prepare (done in ::SetUp method)
     // execute (done in ::SetUp method)
     this->WaitFor(25);
     // test
-    EXPECT_EQ(m_client->GetStage(), IStage::State::UNAUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::UNAUTHORIZED);
+    EXPECT_TRUE(m_client->IsAcknowleged())
+        << "Client hasn't been acknowleged";
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 }
 
 /**
- * Client connect ->
- * Server accept -> Server send welcome message ->
- * Client send authorrize request ->
- * Server read and response with confirmation  
+ *  Request:
+ *  {	
+ *      "protocol": "SRR",
+ *      "type": "list-chatrooms",
+ *      "timestamp": 344678435266,
+ *      "timeout": 30
+ *  } 
  */
-TEST_F(TCPInteractionTest, ClientAuthorization) {
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    request.SetName("Random Name #1");
-    request.SetBody("Testing authorization");
-    
-    // send authorization request to server
-    m_client->Write(request.Serialize());    
-    // give 3 seconds for server - client communication
+TEST_F(BasicInteractionTest, ChatroomListRequest) {
+    /// 0. Confirm Handshake
     this->WaitFor(25);
-    
-    // check results:
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED);
-}
+    EXPECT_TRUE(m_client->IsAcknowleged())
+        << "Client hasn't been acknowleged";
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
-TEST_F(TCPInteractionTest, AuthorizedChatroomListRequest) {
     /// 1. Server creates chatrooms
-    m_server->CreateChatroom("WoW 3.3.5a");
-    m_server->CreateChatroom("Dota 2");
-    m_server->CreateChatroom("Programming");
-    m_server->CreateChatroom("Chatting");
-    
-    /// 2. Complete authorization 
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    request.SetName("Random Name #1");
-    
-    // send authorization request to server
-    m_client->Write(request.Serialize());   
-    // give 0.025 seconds for server - client communication
-    this->WaitFor(25);
-    // make sure that authorization was completed
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
-    
-    /// 3. Request chatroom list
-    Requests::Request listRequest{};
-    listRequest.SetType(Requests::RequestType::LIST_CHATROOM);
-    // send request to server
-    m_client->Write(listRequest.Serialize());   
-    // give  0.025 seconds for server response
-    this->WaitFor(25);
+    struct MockChatroom {
+        std::string name;
+        std::size_t id;
+        std::size_t users { 0 };
 
-    /// 4. Compare expected result and recieved response
-    const auto sourceChatList = m_server->GetChatroomList(); // chatroom list which has been sent
-    const auto aquiredChatList = m_client->GetGUI().GetRequest().GetBody(); // chatroom list which has been recieved united via '\n' symbol
-    // devide chatroom list
-    std::vector<std::string> resultList;
-    size_t start { 0 };
-    size_t finish = aquiredChatList.find('\n', start);
-    while( finish != std::string::npos ) {
-        resultList.emplace_back(aquiredChatList.substr(start, finish - start));
-        start = finish + 1;
-        finish = aquiredChatList.find('\n', start);
-    }
-    resultList.emplace_back(aquiredChatList.substr(start, std::string::npos));
-
-    // compare source and result
-    EXPECT_EQ(m_client->GetGUI().GetRequest().GetCode(), Requests::ErrorCode::SUCCESS);
-    EXPECT_EQ(resultList.size(), sourceChatList.size());
-    for(size_t i = 0; i < resultList.size(); i++) {
-        EXPECT_EQ(resultList[i], sourceChatList[i]);
-    }
-}
-
-TEST_F(TCPInteractionTest, UnauthorizedChatroomListRequest) {
-    /// 1. Server creates chatrooms
-    m_server->CreateChatroom("WoW 3.3.5a");
-    m_server->CreateChatroom("Dota 2");
-    m_server->CreateChatroom("Programming");
-    m_server->CreateChatroom("Chatting");
-    
-    /// 2. Ignore authorization 
-    EXPECT_EQ(m_client->GetStage(), IStage::State::UNAUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::UNAUTHORIZED); 
-
-    /// 3. Request chatroom list
-    Requests::Request listRequest{};
-    listRequest.SetType(Requests::RequestType::LIST_CHATROOM);
-    // send request to server
-    m_client->Write(listRequest.Serialize());   
-    // give  0.025 seconds for server response
-    this->WaitFor(25);
-    /// 4. Compare expected result and recieved response
-    const auto sourceChatList = m_server->GetChatroomList(); // chatroom list which has been sent
-    const auto &recievedReqeuest = m_client->GetGUI().GetRequest();
-    
-    EXPECT_EQ(recievedReqeuest.GetType(), Requests::RequestType::LIST_CHATROOM);
-    EXPECT_EQ(recievedReqeuest.GetStage(), IStage::State::UNAUTHORIZED);
-    EXPECT_EQ(recievedReqeuest.GetCode(), Requests::ErrorCode::FAILURE);
-
-}
-
-// Requests::RequestType::JOIN_CHATROOM for already existing chatrooms
-TEST_F(TCPInteractionTest, AuthorizedJoinChatroomRequest) {
-    const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    // #0 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
-    m_server->CreateChatroom(desiredChatroomName); 
-    // #1 Complete authorization
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    request.SetName("Authorized Join Chatroom Request");
-    
-    // send authorization request to server
-    m_client->Write(request.Serialize());    
-    // give 3 seconds for server - client communication
-    this->WaitFor(25);
-    
-    // check results:
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
-    
-    // #2 Get current chatroom list
-    request.Reset();
-    request.SetType(Requests::RequestType::LIST_CHATROOM);
-    // send request
-    m_client->Write(request.Serialize());   
-    // wait 25ms for answer
-    this->WaitFor(25);
-    // confirm that there is a successfull reply
-    const auto& listReply = m_client->GetGUI().GetRequest();
-    EXPECT_EQ(listReply.GetCode(), Requests::ErrorCode::SUCCESS);
-    const auto& chatroomList = listReply.GetBody();
-    
-    // #3 Extract desired chatroom ID
-    const auto namePos = chatroomList.find(desiredChatroomName);
-    EXPECT_NE(namePos, std::string::npos) 
-        << "Can't find: " << desiredChatroomName;
-    // Chatroom string representation is in json format: { "id": .., "name": "..", "users": .. }
-    const auto idTagPos = chatroomList.rfind("id", namePos);
-    EXPECT_NE(idTagPos, std::string::npos) 
-        << "Can't find id for: " << desiredChatroomName;
-    
-    // Extract id
-    const auto idStart = chatroomList.find(':', idTagPos);
-    const auto idEnd = chatroomList.find(',', idStart);
-    
-    EXPECT_NE(idStart, std::string::npos);
-    EXPECT_NE(idEnd, std::string::npos);
-    
-    const auto idRep =  chatroomList.substr(idStart + 1, idEnd - idStart - 1);
-    const auto id = std::stoi(idRep);
-
-    // #4 Join Chatroom
-    request.Reset();
-    request.SetType(Requests::RequestType::JOIN_CHATROOM);
-    request.SetChatroom(id);
-    // send request
-    m_client->Write(request.Serialize());   
-    // wait 25ms for answer
-    this->WaitFor(25);
-
-    // #5 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetRequest();
-
-    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::JOIN_CHATROOM);
-    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS) 
-        << "Server deni access to the chatroom: " << desiredChatroomName 
-        << " with id: " << id;
-    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
-    EXPECT_EQ(joinReply.GetChatroom(), id);
-}
-
-// Requests::RequestType::CREATE_CHATROOM create and join new chatroom.
-TEST_F(TCPInteractionTest, AuthorizedCreateChatroomRequest) {
-    // #0 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
-    // #1 Complete authorization
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    request.SetName("Authorized Join Chatroom Request");
-    
-    // send authorization request to server
-    m_client->Write(request.Serialize());    
-    // give 3 seconds for server - client communication
-    this->WaitFor(25);
-    
-    // check results:
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
-
-    // #2 Create Chatroom
-    const std::string roomName { "Room for testing a room creation via client's request" };
-    request.Reset();
-    request.SetType(Requests::RequestType::CREATE_CHATROOM);
-    request.SetName(roomName);
-    // send request
-    m_client->Write(request.Serialize());   
-    // wait 25ms for answer
-    this->WaitFor(25);
-
-    // #3 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetRequest();
-
-    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::CREATE_CHATROOM);
-    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS) 
-        << "Server forbid creating chatrooms";
-    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
-    EXPECT_EQ(joinReply.GetName(), roomName);
-
-    // #4 Confirm number of users in this room & it's existence;
-    int usersCount { -1 };
-    const auto chatrooms { m_server->GetChatroomList() };
-    // find just created chatroom
-    // { "id": 2, "name": "some long name", "users": 1 } 
-    const std::regex rx { ".+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
-    std::smatch match;
-    for(const auto& room: chatrooms) {
-        EXPECT_TRUE(std::regex_match(room,  match, rx));
-        // The first sub_match is the whole string; the next
-        // sub_match is the first parenthesized expression.
-        const auto name { match[1].str() };
-        if( name == roomName ) {
-            usersCount = std::stoi(match[2].str());
-            break;
+        bool operator==(const MockChatroom& rhs) const noexcept {
+            return id == rhs.id && users == rhs.users && name == rhs.name;
         }
-    } 
-    EXPECT_EQ(usersCount, 1) 
-        << "Either some weird error occured either room doesn't exist!";
+    };
+    std::array<MockChatroom, 2> expectedRooms;
+    expectedRooms[0].name = "WoW 3.3.5a";
+    expectedRooms[0].id = m_server->CreateChatroom(expectedRooms[0].name);
+    expectedRooms[1].name = "Dota 2";
+    expectedRooms[1].id = m_server->CreateChatroom(expectedRooms[1].name);
+ 
+    /// 2. Request chatroom list
+    Internal::Request listRequest{};
+    listRequest.m_type = Internal::QueryType::LIST_CHATROOM;
+    listRequest.m_timestamp = Utils::GetTimestamp();
+    listRequest.m_timeout = 30;
+    std::string serialized {};
+    listRequest.Write(serialized);
+    // send request to server
+    m_client->Write(std::move(serialized));   
+    this->WaitFor(listRequest.m_timeout);
+
+    /// 3. build a chatroom list
+    const auto& jsonString = m_client->GetGUI().GetResponse().m_attachment;
+
+    rapidjson::Document reader;
+    reader.Parse(jsonString.c_str());
+    const auto& chatrooms = reader["chatrooms"].GetArray();
+    // 
+    EXPECT_EQ(chatrooms.Size(), expectedRooms.size());
+    std::array<MockChatroom, 2> recievedRooms;
+    std::size_t i { 0 };
+    for(const auto& roomObj: chatrooms) {
+        recievedRooms[i].id = roomObj["id"].GetUint64(); 
+        recievedRooms[i].name = roomObj["name"].GetString();
+        recievedRooms[i].users = roomObj["users"].GetUint64(); 
+        i++;
+    }
+    /// 4. Compare expected result and recieved response
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::LIST_CHATROOM);
+    for(std::size_t i = 0; i < expectedRooms.size(); i++) {
+        EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
+    }
 }
 
-// Requests::RequestType::ABOUT_CHATROOM 
-TEST_F(TCPInteractionTest, AuthorizedAboutChatroomRequest) {
-    const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    // #0 Create other chatrooms
+// Internal::QueryType::JOIN_CHATROOM for already existing chatrooms
+TEST_F(BasicInteractionTest, JoinChatroomRequest) {
+    /// #0. Cinfirm Handshake
+    this->WaitFor(25);
+    EXPECT_TRUE(m_client->IsAcknowleged())
+        << "Client hasn't been acknowleged";
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+
+    
+    /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
     m_server->CreateChatroom("Test chatroom #2"); 
     m_server->CreateChatroom("Test chatroom #3"); 
-    const auto desiredChatroomId = m_server->CreateChatroom(desiredChatroomName); 
-
-    // #1 Complete authorization
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    // send authorization request to server
-    m_client->Write(request.Serialize());    
-    // give 25ms for server - client communication
-    this->WaitFor(25);
-    // check results:
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
-    
-    // #2 Get chatroom info
-    request.Reset();
-    request.SetType(Requests::RequestType::ABOUT_CHATROOM);
-    request.SetChatroom(desiredChatroomId);
-    // send request
-    m_client->Write(request.Serialize());   
-    // wait 25ms for answer
-    this->WaitFor(25);
-
-    const auto& reply = m_client->GetGUI().GetRequest();
-    // check reply state
-    EXPECT_EQ(reply.GetType(), Requests::RequestType::ABOUT_CHATROOM);
-    EXPECT_EQ(reply.GetCode(), Requests::ErrorCode::SUCCESS);
-    EXPECT_EQ(reply.GetStage(), IStage::State::AUTHORIZED);
-
-    int expectedUsersCount { 0 };
-
-    const std::regex rx { ".+\"id\":[ ]*(\\d+).+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
-    std::smatch match;
-
-    EXPECT_TRUE(std::regex_match(reply.GetBody(), match, rx));
-
-    EXPECT_EQ(desiredChatroomId,    std::stoi(match[1].str()));
-    EXPECT_EQ(desiredChatroomName,  match[2].str());
-    EXPECT_EQ(expectedUsersCount,   std::stoi(match[3].str()));
-}
-
-// Requests::RequestType::LEAVE_CHATROOM 
-TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    
-    // #0 Create other chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
-    const auto desiredChatroomId = m_server->CreateChatroom(desiredChatroomName); 
-    
-    // #1 Complete authorization
-    Requests::Request request{};
-    request.SetType(Requests::RequestType::AUTHORIZE);
-    // send authorization request to server
-    m_client->Write(request.Serialize());    
-    // give 25ms for server - client communication
-    this->WaitFor(25);
-    // check results:
-    EXPECT_EQ(m_client->GetStage(), IStage::State::AUTHORIZED) 
-        << "Problems with Fixure initialization occured: "
-        << "\nClient's stage is: " << static_cast<size_t>(m_client->GetStage())
-        << "\nExpected: " << static_cast<size_t>(IStage::State::AUTHORIZED); 
+    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
     
     // #2 Join Chatroom
-    request.Reset();
-    request.SetType(Requests::RequestType::JOIN_CHATROOM);
-    request.SetChatroom(desiredChatroomId);
+    Internal::Request request{};
+    request.m_type = Internal::QueryType::JOIN_CHATROOM;
+    request.m_timeout = 30;
+    request.m_timestamp = Utils::GetTimestamp();
+    // Set up body
+    rapidjson::Document doc(rapidjson::kObjectType);
+    auto& alloc = doc.GetAllocator();
+    doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
+    doc["user"].AddMember("name", rapidjson::Value("random username", alloc), alloc);
+    
+    doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
+    doc["chatroom"].AddMember("id", desiredId, alloc);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
+    doc.Accept(writer);
+    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
+
     // send request
-    m_client->Write(request.Serialize());   
+    std::string serialized;
+    request.Write(serialized);
+    m_client->Write(std::move(serialized));   
     // wait 25ms for answer
+    this->WaitFor(request.m_timeout);
+
+    // #3 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetResponse();
+
+    EXPECT_EQ(joinReply.m_type, Internal::QueryType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.m_status, 200);
+    EXPECT_TRUE(joinReply.m_attachment.empty());
+}
+
+// Internal::QueryType::CREATE_CHATROOM create and join new chatroom.
+TEST_F(BasicInteractionTest, CreateChatroomRequest) {
+    /// #0. Cinfirm Handshake
     this->WaitFor(25);
+    EXPECT_TRUE(m_client->IsAcknowleged())
+        << "Client hasn't been acknowleged";
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
-    // #3 save chatroom count
-    size_t chatroomCountBefore { m_server->GetChatroomList().size() };
+    /// #1 Create chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    
+    // #2 Join Chatroom
+    Internal::Request request{};
+    request.m_type = Internal::QueryType::CREATE_CHATROOM;
+    request.m_timeout = 30;
+    request.m_timestamp = Utils::GetTimestamp();
+    // Set up body
+    rapidjson::Document doc(rapidjson::kObjectType);
+    auto& alloc = doc.GetAllocator();
+    doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
+    doc["user"].AddMember("name", rapidjson::Value("random username", alloc), alloc);
+    
+    doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
+    doc["chatroom"].AddMember("name", rapidjson::Value(desiredChatroomName.c_str(), alloc), alloc);
 
-    // #4 Leave Chatroom
-    request.Reset();
-    request.SetType(Requests::RequestType::LEAVE_CHATROOM);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
+    doc.Accept(writer);
+    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
+
     // send request
-    m_client->Write(request.Serialize());   
-    // wait 25ms for answer
+    std::string serialized;
+    request.Write(serialized);
+    m_client->Write(std::move(serialized));   
+    // wait 30ms for answer
+    this->WaitFor(request.m_timeout);
+
+    // #3 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetResponse();
+
+    EXPECT_EQ(joinReply.m_type, Internal::QueryType::CREATE_CHATROOM);
+    EXPECT_EQ(joinReply.m_status, 200);
+    EXPECT_TRUE(!joinReply.m_attachment.empty());
+
+    // #4 Parse attachment and extract room ID
+    rapidjson::Document reader;
+    reader.Parse(joinReply.m_attachment.c_str());
+    const auto id = reader["chatroom"]["id"].GetUint64();
+    EXPECT_NE(id, chat::Chatroom::NO_ROOM);
+
+    // #5 Confirm that the server has one room with this ID
+    const auto expectedUsersCount { 1 }; // only this client!
+    const auto& currentChatroomList = m_server->GetChatroomList();
+    const std::regex rx { ".+\"id\":[ ]*(\\d+).+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
+    std::smatch match;
+    auto foundMatchRoom { false };
+    for(const auto& room: currentChatroomList) {
+        EXPECT_TRUE(std::regex_match(room, match, rx));
+
+        if(std::stoi(match[1].str()) == id) {
+            foundMatchRoom = true;
+            EXPECT_EQ(desiredChatroomName, match[2].str());
+            EXPECT_EQ(expectedUsersCount, std::stoi(match[3].str()));
+        }
+    }
+    EXPECT_TRUE(foundMatchRoom) << "Can't find a room with ID from server's response";
+
+}
+
+
+// Internal::QueryType::LEAVE_CHATROOM 
+TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
+    /// #0. Cinfirm Handshake
     this->WaitFor(25);
+    EXPECT_TRUE(m_client->IsAcknowleged())
+        << "Client hasn't been acknowleged";
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
-    // #5 compare number of chatrooms before and after leave
-    size_t chatroomCountAfter { m_server->GetChatroomList().size() };
-    EXPECT_NE(chatroomCountAfter, chatroomCountBefore);
+    /// #1 Create chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
+    
+    // #2 Join Chatroom
+    Internal::Request request{};
+    request.m_type = Internal::QueryType::JOIN_CHATROOM;
+    request.m_timeout = 30;
+    request.m_timestamp = Utils::GetTimestamp();
+    // Set up body
+    rapidjson::Document doc(rapidjson::kObjectType);
+    auto& alloc = doc.GetAllocator();
+    doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
+    doc["user"].AddMember("name", rapidjson::Value("random username", alloc), alloc);
+    
+    doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
+    doc["chatroom"].AddMember("id", desiredId, alloc);
 
-    const auto& joinReply = m_client->GetGUI().GetRequest();
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
+    doc.Accept(writer);
+    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
 
-    EXPECT_EQ(joinReply.GetType(), Requests::RequestType::LEAVE_CHATROOM);
-    EXPECT_EQ(joinReply.GetCode(), Requests::ErrorCode::SUCCESS);
-    EXPECT_EQ(joinReply.GetStage(), IStage::State::AUTHORIZED);
+    // send request
+    std::string serialized;
+    request.Write(serialized);
+    m_client->Write(std::move(serialized));   
+    // wait 25ms for answer
+    this->WaitFor(request.m_timeout);
+
+    // #3 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetResponse();
+
+    EXPECT_EQ(joinReply.m_type, Internal::QueryType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.m_status, 200);
+    EXPECT_TRUE(joinReply.m_attachment.empty());
+
+    /// #4 Confirm that the server has one room with this ID and 1 user
+    const auto room = m_server->GetChatroom(desiredId);
+    const auto expectedUsersCount { 1 }; // only this client!
+    EXPECT_NE(room, nullptr);
+    EXPECT_EQ(desiredChatroomName, room->GetName());
+    EXPECT_EQ(expectedUsersCount, room->GetSessionCount());
+    
+    /// #5 Leave chatroom
+    Internal::Request leaveRequest{};
+    leaveRequest.m_type = Internal::QueryType::LEAVE_CHATROOM;
+    leaveRequest.m_timeout = 30;
+    leaveRequest.m_timestamp = Utils::GetTimestamp();
+    // send request
+    serialized.clear();
+    leaveRequest.Write(serialized);
+    m_client->Write(std::move(serialized));   
+    // wait for answer
+    this->WaitFor(leaveRequest.m_timeout);
+
+    /// #6 Confirmn that we've left
+    const auto afterLeaveRoom = m_server->GetChatroom(desiredId);
+    EXPECT_EQ(afterLeaveRoom, nullptr);
 }
 
 /** TODO:
@@ -427,3 +353,5 @@ TEST_F(TCPInteractionTest, AuthorizedLeaveChatroomRequest) {
  * - [ ] Multiply clients trying to create the chatroom (maybe with the same name);
  * - [ ] 
  */
+
+#endif // SESSION_TESTS_HPP
