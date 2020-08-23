@@ -215,14 +215,14 @@ void Client::SendSynRequest() {
 
 void Client::HandleMessage(Internal::Message& msg) {
     const auto protocol { std::string(msg.GetProtocol()) };
-    if( protocol == Internal::Chat::m_protocol) {
+    if( protocol == Internal::Chat::PROTOCOL) {
         const auto chat = dynamic_cast<Internal::Chat *>(&msg);
         if( m_state == State::RECIEVE_ACK ) {
             // confirm we're at room
             m_gui.UpdateChat(std::move(*chat));
         }
     }
-    else if( protocol == Internal::Response::m_protocol) {
+    else if( protocol == Internal::Response::PROTOCOL) {
         const auto response = dynamic_cast<Internal::Response *>(&msg);
         switch(m_state) {
             case State::WAIT_ACK: 

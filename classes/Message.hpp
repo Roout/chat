@@ -28,7 +28,7 @@ namespace Internal {
          * Protocol
          *  - "Simple Request-Response Protocol" (RRP)
          */
-        static constexpr char* const m_protocol { "RRP" };
+        static constexpr char* const PROTOCOL { "RRP" };
 
         /**
          * Type of request. 
@@ -60,7 +60,7 @@ namespace Internal {
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
-            return m_protocol;
+            return PROTOCOL;
         }
     };
 
@@ -70,7 +70,7 @@ namespace Internal {
          * Protocol
          *  - "Simple Request-Response Protocol" (RRP)
          */
-        static constexpr char* const m_protocol { "RRP" };
+        static constexpr char* const PROTOCOL { "RRP" };
 
         /**
          * Type of request. 
@@ -107,7 +107,7 @@ namespace Internal {
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
-            return m_protocol;
+            return PROTOCOL;
         }
     };
 
@@ -117,7 +117,7 @@ namespace Internal {
         /**
          * Protocol used for the communication at chatroom 
          */
-        static constexpr char* const m_protocol { "chat" }; 
+        static constexpr char* const PROTOCOL { "chat" }; 
         /**
          * This is a time when the request was formed and sent. 
          * It's a time since epoch in milliseconds.
@@ -141,7 +141,7 @@ namespace Internal {
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
-            return m_protocol;
+            return PROTOCOL;
         }
     };
 }

@@ -61,7 +61,7 @@ namespace Internal {
 
         rapidjson::Value value;
         
-        value.SetString(m_protocol, alloc);
+        value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
 
         const auto type = ::AsString(m_type);
@@ -118,7 +118,7 @@ namespace Internal {
 
         rapidjson::Value value;
         
-        value.SetString(m_protocol, alloc);
+        value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
 
         const auto type = ::AsString(m_type);
@@ -167,7 +167,7 @@ namespace Internal {
 
         rapidjson::Value value;
         
-        value.SetString(m_protocol, alloc);
+        value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
 
         value.SetInt64(m_timestamp);
