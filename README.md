@@ -18,8 +18,8 @@ TCP protocol will be used.
 - [x] timely remove all connections that were closed
 
 # TODO #1
-- [ ] Add safe client disconnection
-- [ ] Add safe server disconnection
+- [x] Add safe client disconnection
+- [x] Add safe server disconnection
 Safe disconnection should be achieved by catching exception from io_context so
 it need to be wrapped in try-catch block.
 - [x] Fix errors and add multithreading safety:
@@ -59,7 +59,7 @@ and if the writing is going on it will just push to buffer text to be sent immed
 - Very easy to implement.
 
 # TODO #2
-- [ ] can I remove server pointer from the session?
+- [x] can I remove server pointer from the session? - Can't
 - [x] reorganize work with buffers.
 
 # TODO #3
