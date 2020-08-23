@@ -63,7 +63,6 @@ void chat::Chatroom::Close() {
     };
 }
 
-
 std::size_t chat::Chatroom::GetId() const noexcept {
     return m_impl->m_id;
 } 
@@ -76,11 +75,6 @@ const std::string& chat::Chatroom::GetName() const noexcept {
     return m_impl->m_name;
 }
 
-
-/**
- * @return 
- *      The indication whether the session was insert successfully or not. 
- */
 bool chat::Chatroom::AddSession(const std::shared_ptr<Session>& session) {
     for(auto& s: m_impl->m_sessions) {
         if( !s ) {
