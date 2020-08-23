@@ -325,11 +325,12 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
     /// #4 Confirm that the server has one room with this ID and 1 user
-    const auto room = m_server->GetChatroom(desiredId);
+    enum { ID, USERS, NAME };
+    const auto roomTupleOpt = m_server->GetChatroomData(desiredId);
     const auto expectedUsersCount { 1 }; // only this client!
-    EXPECT_NE(room, nullptr);
-    EXPECT_EQ(desiredChatroomName, room->GetName());
-    EXPECT_EQ(expectedUsersCount, room->GetSessionCount());
+    EXPECT_NE(roomTupleOpt, std::nullopt);
+    EXPECT_EQ(desiredChatroomName, std::get<NAME>(*roomTupleOpt));
+    EXPECT_EQ(expectedUsersCount, std::get<USERS>(*roomTupleOpt));
     
     /// #5 Leave chatroom
     Internal::Request leaveRequest{};
@@ -340,12 +341,13 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     serialized.clear();
     leaveRequest.Write(serialized);
     m_client->Write(std::move(serialized));   
+
     // wait for answer
     this->WaitFor(leaveRequest.m_timeout);
 
     /// #6 Confirmn that we've left
-    const auto afterLeaveRoom = m_server->GetChatroom(desiredId);
-    EXPECT_EQ(afterLeaveRoom, nullptr);
+    const auto afterLeaveRoomOpt = m_server->GetChatroomData(desiredId);
+    EXPECT_EQ(afterLeaveRoomOpt, std::nullopt);
 }
 
 /** TODO:
