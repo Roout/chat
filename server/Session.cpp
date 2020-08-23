@@ -178,12 +178,12 @@ bool Session::LeaveChatroom() {
 void Session::HandleMessage(const Internal::Message& msg) {
     std::string reply {};
     const auto protocol { std::string(msg.GetProtocol()) };
-    if( protocol == Internal::Request::m_protocol ) {
+    if( protocol == Internal::Request::PROTOCOL ) {
         const auto request = dynamic_cast< Internal::Request const* >(&msg);
         reply = HandleRequest(request);
         this->Write(reply);
     } 
-    else if( protocol == Internal::Chat::m_protocol ) {
+    else if( protocol == Internal::Chat::PROTOCOL ) {
         const auto chat = dynamic_cast< Internal::Chat const* >(&msg);
         this->HandleChat(chat);
     }

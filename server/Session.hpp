@@ -37,8 +37,8 @@ public:
 
     /**
      * Read data from the remote connection.
-     * At first invoked on accept completion handler and then only
-     * on read completion handler. This prevent concurrent execution 
+     * At first it's invoked `on accept` completion handler and then only
+     * `on read` completion handler. This prevents a concurrent execution 
      * of read operation on the same socket.
      */
     void Read();
@@ -51,13 +51,14 @@ public:
         return m_user;
     }
 
-    bool IsWaitingSyn() const noexcept{
+    bool IsWaitingSyn() const noexcept {
         return m_state == State::WAIT_SYNCHRONIZE_REQUEST;
     }
 
     bool IsAcknowleged() const noexcept {
         return m_state == State::SENT_ACKNOWLEDGED_RESPONSE;
     }
+    
     /**
      * Shutdown Session and close the socket  
      */
@@ -79,6 +80,9 @@ private:
         std::size_t transferredBytes
     );
     
+    /**
+     * This method calls async I/O write operation.
+     */
     void Write();
 
     /**
@@ -99,16 +103,23 @@ private:
     std::string HandleRequest(const Internal::Request* request);
 
     /**
-     * Build reply base on incoming request
+     * Handle incoming chat message
      * 
      * @param chat
      *  This is chat message which came from the remote peer. 
-     * @return 
-     *  Return serialized reply(chat format) build base on @chat
      */
     void HandleChat(const Internal::Chat* chat);
 
     /// Minor Helper functions
+
+    /**
+     * This is a method which builds response only for incoming SYNCHRONIZATION requests. 
+     * @param request
+     *  This is incoming (from the remote peer) request: first step of the handshake.
+     * @return 
+     *  Return respose base on processed request. If everything is fine, 
+     *  respose will have an ACKNOWLEDGEMENT.
+     */
     Internal::Response HandleSyncRequest(const Internal::Request& request);
     
     /// Properties
@@ -135,12 +146,15 @@ private:
     };
 
     /**
-     * It's a socket connected to the server. 
+     * It's a socket connected to the remote peer. 
      */
     asio::ip::tcp::socket m_socket;
 
     Server * const m_server { nullptr };
 
+    /**
+     * It's a user assosiated with remote connection 
+     */
     Internal::User m_user;
 
     asio::io_context::strand m_strand;
@@ -152,8 +166,15 @@ private:
      */
     asio::streambuf m_inbox;
 
+    /**
+     * This is indication whether the socket writing operation is being performed or not. 
+     */
     bool m_isWriting { false };
 
+    /**
+     * This is indication of the current state of this session,
+     * i.e. stage of communication.  
+     */
     State m_state { State::WAIT_SYNCHRONIZE_REQUEST };
 
     /// TODO: add deadline timer to keep track for timeouts
