@@ -8,8 +8,8 @@ set(sources_files
   "all-tests.cpp"
 )
 set(header_files
-  "request-tests.hpp"
-  "session-tests.hpp"
+  "message-tests.hpp"
+  "single-client-messaging-tests.hpp"
 
   "../rapidjson/document.h"
   "../rapidjson/writer.h"
