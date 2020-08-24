@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include "QueryType.hpp"
+#include "../rapidjson/document.h"
 
 namespace Internal {
     
@@ -15,7 +16,7 @@ namespace Internal {
 
         virtual ~Message() = default;
 
-        virtual void Read(const std::string& json) = 0;
+        virtual void Read(rapidjson::Document& doc) = 0;
 
         virtual void Write(std::string& json) = 0;
 
@@ -23,6 +24,8 @@ namespace Internal {
     };
 
     struct Request : public Message {
+
+        static constexpr char* const TAG { "request" };
 
         /**
          * Protocol
@@ -55,7 +58,7 @@ namespace Internal {
 
         // Methods
 
-        void Read(const std::string& json) override;
+        void Read(rapidjson::Document& doc) override;
 
         void Write(std::string& json) override;
 
@@ -65,6 +68,8 @@ namespace Internal {
     };
 
     struct Response : public Message {
+        
+        static constexpr char* const TAG { "response" };
 
         /**
          * Protocol
@@ -102,7 +107,7 @@ namespace Internal {
 
         // Methods
 
-        void Read(const std::string& json) override;
+        void Read(rapidjson::Document& doc) override;
 
         void Write(std::string& json) override;
 
@@ -114,6 +119,7 @@ namespace Internal {
     struct Chat : public Message {
         // Properties
 
+        static constexpr char* const TAG { "chat"};
         /**
          * Protocol used for the communication at chatroom 
          */
@@ -136,7 +142,7 @@ namespace Internal {
         std::string m_message {};
 
         // Methods
-        void Read(const std::string& json) override;
+        void Read(rapidjson::Document& doc) override;
 
         void Write(std::string& json) override;
 
@@ -144,6 +150,12 @@ namespace Internal {
             return PROTOCOL;
         }
     };
+
+    /**
+     * This function reads json object from the string,
+     * deside what type of message it is and create appropriate one.
+     */
+    std::unique_ptr<Message> Read(const std::string& json);
 }
 
 #endif // INTERNAL_MESSAGE_HPP

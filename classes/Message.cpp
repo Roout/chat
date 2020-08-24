@@ -38,10 +38,7 @@ namespace {
 
 namespace Internal {
 
-    void Request::Read(const std::string& json) {
-        rapidjson::Document doc;
-        doc.Parse(json.c_str());
-
+    void Request::Read(rapidjson::Document& doc) {
         m_type = ::AsQueryType(doc["type"].GetString());
         m_timestamp = doc["timestamp"].GetInt64();
         m_timeout = doc["timeout"].GetUint64();
@@ -63,6 +60,9 @@ namespace Internal {
         
         value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
+
+        value.SetString(TAG, alloc);
+        doc.AddMember("tag", value, alloc);
 
         const auto type = ::AsString(m_type);
         value.SetString(type.c_str(), alloc);
@@ -89,10 +89,7 @@ namespace Internal {
         json += MESSAGE_DELIMITER;
     }
     
-    void Response::Read(const std::string& json) {
-        rapidjson::Document doc;
-        doc.Parse(json.c_str());
-
+    void Response::Read(rapidjson::Document& doc) {
         m_type = ::AsQueryType(doc["type"].GetString());
         m_timestamp = doc["timestamp"].GetInt64();
         m_status = doc["status"].GetInt();
@@ -120,6 +117,9 @@ namespace Internal {
         
         value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
+
+        value.SetString(TAG, alloc);
+        doc.AddMember("tag", value, alloc);
 
         const auto type = ::AsString(m_type);
         value.SetString(type.c_str(), alloc);
@@ -151,10 +151,7 @@ namespace Internal {
         json += MESSAGE_DELIMITER;
     }
 
-    void Chat::Read(const std::string& json) {
-        rapidjson::Document doc;
-        doc.Parse(json.c_str());
-
+    void Chat::Read(rapidjson::Document& doc) {
         m_timestamp = doc["timestamp"].GetInt64();
         m_timeout = doc["timeout"].GetUint64();
         m_message = doc["message"].GetString();
@@ -169,6 +166,9 @@ namespace Internal {
         
         value.SetString(PROTOCOL, alloc);
         doc.AddMember("protocol", value, alloc);
+
+        value.SetString(TAG, alloc);
+        doc.AddMember("tag", value, alloc);
 
         value.SetInt64(m_timestamp);
         doc.AddMember("timestamp", value, alloc);
@@ -187,4 +187,22 @@ namespace Internal {
         json = std::string(buffer.GetString(), buffer.GetLength());
         json += MESSAGE_DELIMITER;
     }
+
+    std::unique_ptr<Message> Read(const std::string& json) {
+        rapidjson::Document doc;
+        doc.Parse(json.c_str());
+        const std::string tag = doc["tag"].GetString();
+        // dispatch base on tag
+        std::unique_ptr<Message> message {};
+        if( tag == Response::TAG ) {
+            message = std::make_unique<Response>();
+        } else if( tag == Request::TAG ) {
+            message = std::make_unique<Request>();
+        } else if( tag == Chat::TAG ) {
+            message = std::make_unique<Chat>();
+        }
+        message->Read(doc);
+        return message;
+    }
+
 };
