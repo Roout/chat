@@ -107,16 +107,15 @@ void Session::ReadSomeHandler(
         };
         m_inbox.consume(transferredBytes);
         
-        Internal::Request incomingRequest {};
-        // TODO: handle possible exceptions
-        incomingRequest.Read(recieved);
+        // Handle exceptions
+        const auto incomingRequest = Internal::Read(recieved);
 
         boost::system::error_code ec; 
         m_server->Write(LogType::info, 
             m_socket.remote_endpoint(ec), ": ", recieved, '\n'
         );
 
-        this->HandleMessage(incomingRequest);
+        this->HandleMessage(*incomingRequest);
         this->Read();
     } 
     else {

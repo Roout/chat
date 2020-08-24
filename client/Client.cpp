@@ -118,8 +118,7 @@ void Client::OnRead(
         
         m_inbox.consume(transferredBytes);
         
-        Internal::Response incomingResponse {};
-        incomingResponse.Read(recieved);
+        const auto incomingResponse = Internal::Read(recieved);
         
         boost::system::error_code error; 
         m_logger.Write( 
@@ -127,7 +126,7 @@ void Client::OnRead(
             m_socket.remote_endpoint(error), ": ", recieved, '\n' 
         );
 
-        this->HandleMessage(incomingResponse);
+        this->HandleMessage(*incomingResponse);
         this->Read();
     } 
     else {
