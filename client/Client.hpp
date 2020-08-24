@@ -1,4 +1,6 @@
-#pragma once
+#ifndef CHAT_CLIENT_HPP
+#define CHAT_CLIENT_HPP
+
 #include <memory>
 #include <string>
 #include <boost/asio.hpp>
@@ -12,18 +14,47 @@ namespace asio = boost::asio;
 class Client final {
 public:
     
+    /**
+     * Create an instance with external I/O context 
+     */
     Client(std::shared_ptr<asio::io_context> io);
 
+    /**
+     * Close connection if it's haven't been terminated yet. 
+     */
     ~Client();
 
+    /**
+     * Trying to connect to the remote host
+     * 
+     * @param path
+     *  It's ip address of the remote host
+     * @param port
+     *  It's a port on which a remote host is listening  
+     */
     void Connect(const std::string& path, std::uint16_t port);
     
+    /**
+     * Write message to the remote peer
+     * @param text
+     *  Message in string format 
+     */
     void Write(std::string && text );
 
+    /**
+     * Check whether a client waiting for acknowledge response or not.
+     * @return 
+     *  The indication that client is waiting for acknowledge response from the server.  
+     */
     bool IsWaitingAck() const noexcept {
         return m_state == State::WAIT_ACK;
     }
 
+    /**
+     * Check whether a client is already acknoledged or not.
+     * @return 
+     *  The indication that client has already recieved an acknowledgement from the server.  
+     */
     bool IsAcknowleged() const noexcept {
         return m_state == State::RECIEVE_ACK;
     }
@@ -46,7 +77,7 @@ private:
     void Write();
 
     /**
-     * Completion handle. 
+     * Completion handler. 
      * Called when the client read something from the remote endpoint
      */
     void OnRead(
@@ -55,7 +86,7 @@ private:
     );
 
     /**
-     * Completion handle; called when the client write something to the remote endpoint
+     * Completion handler; called when the client write something to the remote endpoint
      */
     void OnWrite(
         const boost::system::error_code& error, 
@@ -108,3 +139,5 @@ private:
 inline const GUI& Client::GetGUI() const noexcept {
     return m_gui;
 }
+
+#endif // CHAT_CLIENT_HPP
