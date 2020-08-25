@@ -12,11 +12,11 @@ Server::Server(std::shared_ptr<asio::io_context> context, std::uint16_t port) :
 void Server::Start() {
     m_socket.emplace(*m_context);
     m_acceptor.set_option(
-        // No need to avoid TIME_WAIT state which possibly will tie the port:
+        // No need to avoid TIME_WAIT state which possibly will tie the port
         asio::ip::tcp::acceptor::reuse_address(false)
     );
 
-    m_acceptor.async_accept( *m_socket, [&](const boost::system::error_code& code ) {
+    m_acceptor.async_accept( *m_socket, [this](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code err; 
             this->Write(LogType::info, 
@@ -24,10 +24,10 @@ void Server::Start() {
             );
             
             const auto newSession { std::make_shared<Session>(std::move(*m_socket), this) };
+            newSession->WaitSynchronizationRequest();
             if(!m_hall.AddSession(newSession)) {
                 // TODO: failed to add new session most likely due to connection limit 
             }
-            newSession->Read();
             // wait for the new connections again
             this->Start();
         }

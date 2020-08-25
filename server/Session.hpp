@@ -2,11 +2,12 @@
 #define SESSION_HPP
 
 #include <string>
+#include <cstddef>
+#include <functional>
 #include <boost/asio.hpp>
 #include "DoubleBuffer.hpp"
-#include "User.hpp"
 #include "Message.hpp"
-#include <cstddef>
+#include "User.hpp"
 
 namespace asio = boost::asio;
 
@@ -29,28 +30,23 @@ public:
         }
     };
 
+    void WaitSynchronizationRequest();
+
     /**
      * Write @text to remote connection.
-     * Invoke private Write() overload via asio::post() through strand
+     * @note
+     *  Invoke private Write() overload via asio::post() through strand
      */
     void Write(std::string text);
 
-    /**
-     * Read data from the remote connection.
-     * At first it's invoked `on accept` completion handler and then only
-     * `on read` completion handler. This prevents a concurrent execution 
-     * of read operation on the same socket.
-     */
-    void Read();
+    const Internal::User& GetUser() const noexcept {
+        return m_user;
+    }
 
     bool IsClosed() const noexcept {
         return m_state == State::DISCONNECTED;
     }
     
-    const Internal::User& GetUser() const noexcept {
-        return m_user;
-    }
-
     bool IsWaitingSyn() const noexcept {
         return m_state == State::WAIT_SYNCHRONIZE_REQUEST;
     }
@@ -63,13 +59,27 @@ public:
      * Shutdown Session and close the socket  
      */
     void Close();
+    
+private:
 
     bool AssignChatroom(std::size_t id);
 
     bool LeaveChatroom();
     
-private:
     
+    /**
+     * Read data from the remote connection.
+     * At first it's invoked at server's `on accept` completion handler.
+     * Otherwise it can be invoked within `on read` completion handler. 
+     * This prevents a concurrent execution of the read operation on the same socket.
+     */
+    void Read();
+    
+    /**
+     * This method calls async I/O write operation.
+     */
+    void Write();
+
     void WriteSomeHandler(
         const boost::system::error_code& error, 
         std::size_t transferredBytes
@@ -79,11 +89,10 @@ private:
         const boost::system::error_code& error, 
         std::size_t transferredBytes
     );
-    
-    /**
-     * This method calls async I/O write operation.
-     */
-    void Write();
+
+    void ExpiredDeadlineHandler(
+        const boost::system::error_code& error
+    );
 
     /**
      * Process incoming message base on protocol.
@@ -167,7 +176,8 @@ private:
     asio::streambuf m_inbox;
 
     /**
-     * This is indication whether the socket writing operation is being performed or not. 
+     * This is an indication whether the socket writing operation 
+     * is ongoing or not. 
      */
     bool m_isWriting { false };
 
@@ -177,7 +187,18 @@ private:
      */
     State m_state { State::WAIT_SYNCHRONIZE_REQUEST };
 
-    /// TODO: add deadline timer to keep track for timeouts
+    /**
+     * This is a timer used to set up deadline for the client
+     * and invoke handler for the expired request.
+     * Now it's used to wait for the synchronization request.  
+     */
+    asio::deadline_timer m_timer;
+
+    /**
+     * Define hom long the session can wait for the SYN request 
+     * from the client. Time is in milliseconds.
+     */
+    std::size_t m_waitSynTimeout { 128 };
 };
 
 

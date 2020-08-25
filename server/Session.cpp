@@ -21,7 +21,8 @@ Session::Session(
     m_socket { std::move(socket) },
     m_server { server },
     m_strand { *server->m_context },
-    m_user {}
+    m_user {},
+    m_timer { *server->m_context }
 {
 }
 
@@ -68,6 +69,39 @@ void Session::Read() {
         )
     );
 }
+
+void Session::ExpiredDeadlineHandler(
+    const boost::system::error_code& error
+) {
+    const bool isCanceled { error == boost::asio::error::operation_aborted };
+    if( !error || isCanceled ) {
+        if( IsWaitingSyn() ) {
+            m_server->Write(LogType::info, "Connection has been closed due to timeout.");
+            Close();
+        }
+        // otherwise the session is either already acknowledged either closed/disconnected. 
+    } 
+    else {
+        // TODO: some weird error
+    }
+}
+
+void Session::WaitSynchronizationRequest() {
+    // start reading requests
+    this->Read();
+    // set up deadline timer for the SYN request from the accepted connection
+    m_timer.expires_from_now(boost::posix_time::milliseconds(m_waitSynTimeout));
+    m_timer.async_wait(
+        asio::bind_executor(
+            m_strand, 
+            std::bind(&Session::ExpiredDeadlineHandler, 
+                this->shared_from_this(), 
+                std::placeholders::_1
+            )
+        )
+    );
+}
+
 
 void Session::Close() {
     /// TODO: get rid of the errors about normal shutdown
