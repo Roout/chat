@@ -68,6 +68,7 @@ protected:
     std::shared_ptr<boost::asio::io_context> m_context {};
     std::vector<std::thread> m_threads {};
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
+    const std::size_t m_waitAckTimeout { 128 };
 };
 
 /**
@@ -80,9 +81,9 @@ protected:
 TEST_F(BasicInteractionTest, OnlyFixureSetup) {
     // prepare (done in ::SetUp method)
     // execute (done in ::SetUp method)
-    this->WaitFor(25);
+    this->WaitFor(m_waitAckTimeout);
     // test
-    EXPECT_TRUE(m_client->IsAcknowleged())
+    ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 }
@@ -98,7 +99,7 @@ TEST_F(BasicInteractionTest, OnlyFixureSetup) {
  */
 TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 0. Confirm Handshake
-    this->WaitFor(25);
+    this->WaitFor(m_waitAckTimeout);
     EXPECT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
@@ -156,8 +157,8 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
 // Internal::QueryType::JOIN_CHATROOM for already existing chatrooms
 TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(25);
-    EXPECT_TRUE(m_client->IsAcknowleged())
+    this->WaitFor(m_waitAckTimeout);
+    ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
@@ -206,8 +207,8 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
 // Internal::QueryType::CREATE_CHATROOM create and join new chatroom.
 TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(25);
-    EXPECT_TRUE(m_client->IsAcknowleged())
+    this->WaitFor(m_waitAckTimeout);
+    ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
@@ -279,8 +280,8 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
 // Internal::QueryType::LEAVE_CHATROOM 
 TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(25);
-    EXPECT_TRUE(m_client->IsAcknowleged())
+    this->WaitFor(m_waitAckTimeout);
+    ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
 
