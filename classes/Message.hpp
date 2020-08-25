@@ -16,15 +16,28 @@ namespace Internal {
 
         virtual ~Message() = default;
 
+        /**
+         * Initialize this instance from the json type
+         * @param doc
+         *  This is a json document which has already parsed json string.
+         */
         virtual void Read(rapidjson::Document& doc) = 0;
 
+        /**
+         * This method serialize this instance to json format
+         * @param[out] json
+         *  String which will hold serialized value. 
+         */
         virtual void Write(std::string& json) = 0;
 
         virtual const char* GetProtocol() const noexcept = 0;
     };
 
     struct Request : public Message {
-
+        
+        /**
+         * Tag that defines message structure. 
+         */
         static constexpr char* const TAG { "request" };
 
         /**
@@ -57,9 +70,19 @@ namespace Internal {
         std::string m_attachment {};
 
         // Methods
-
+        
+        /**
+         * Initialize this instance from the json type
+         * @param doc
+         *  This is a json document which has already parsed json string.
+         */
         void Read(rapidjson::Document& doc) override;
 
+        /**
+         * This method serialize this instance to json format
+         * @param[out] json
+         *  String which will hold serialized value. 
+         */
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
@@ -69,6 +92,9 @@ namespace Internal {
 
     struct Response : public Message {
         
+        /**
+         * Tag that defines message structure. 
+         */
         static constexpr char* const TAG { "response" };
 
         /**
@@ -78,12 +104,12 @@ namespace Internal {
         static constexpr char* const PROTOCOL { "RRP" };
 
         /**
-         * Type of request. 
+         * Type of response. 
          */
         QueryType m_type { QueryType::UNDEFINED };
 
         /**
-         * This is a time when the request was formed and sent. 
+         * This is a time when the response was formed and sent. 
          * It's a time since epoch in milliseconds.
          */
         long long m_timestamp { 0 };
@@ -106,9 +132,19 @@ namespace Internal {
         std::string m_attachment {};
 
         // Methods
-
+        
+        /**
+         * Initialize this instance from the json type
+         * @param doc
+         *  This is a json document which has already parsed json string.
+         */
         void Read(rapidjson::Document& doc) override;
 
+        /**
+         * This method serialize this instance to json format
+         * @param[out] json
+         *  String which will hold serialized value. 
+         */
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
@@ -119,20 +155,24 @@ namespace Internal {
     struct Chat : public Message {
         // Properties
 
+        /**
+         * Tag that defines message structure. 
+         */
         static constexpr char* const TAG { "chat"};
+        
         /**
          * Protocol used for the communication at chatroom 
          */
         static constexpr char* const PROTOCOL { "chat" }; 
+        
         /**
-         * This is a time when the request was formed and sent. 
+         * This is a time when the chat was formed and sent. 
          * It's a time since epoch in milliseconds.
          */
         long long m_timestamp { 0 };
 
         /**
-         * It's a time in milliseconds within which the request 
-         * is valid and can be processed.
+         * It's a time in milliseconds. For now ignore it.
          */
         std::size_t m_timeout { 0 };
 
@@ -142,8 +182,19 @@ namespace Internal {
         std::string m_message {};
 
         // Methods
+
+        /**
+         * Initialize this instance from the json type
+         * @param doc
+         *  This is a json document which has already parsed json string.
+         */
         void Read(rapidjson::Document& doc) override;
 
+        /**
+         * This method serialize this instance to json format
+         * @param[out] json
+         *  String which will hold serialized value. 
+         */
         void Write(std::string& json) override;
 
         const char* GetProtocol() const noexcept override {
