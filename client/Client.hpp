@@ -53,7 +53,7 @@ public:
     /**
      * Check whether a client is already acknoledged or not.
      * @return 
-     *  The indication that client has already recieved an acknowledgement from the server.  
+     *  The indication that client has already received an acknowledgement from the server.  
      */
     bool IsAcknowleged() const noexcept {
         return m_state == State::RECIEVE_ACK;
@@ -94,11 +94,15 @@ private:
     );
 
     /**
-     * This function handle incoming messages
+     * This function handle incoming response
      */
-    void HandleMessage(Internal::Message&);
+    void HandleMessage(Internal::Response&);
 
-    void SendSynRequest();
+    /**
+     * This method initialite handshake with server `on connection` event.
+     * I.e. it sends a request with SYN query type to server.
+     */
+    void Synchronize();
 
 private:
     enum class State {
@@ -115,7 +119,7 @@ private:
         WAIT_ACK,
         /**
          * This state indicates that the client
-         * has already recieved ACK from the 
+         * has already received ACK from the 
          * server and server was acknowledged
          * by the client.
          */

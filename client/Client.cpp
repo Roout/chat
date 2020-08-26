@@ -79,7 +79,7 @@ void Client::OnConnect(const boost::system::error_code& err) {
             "Client connected successfully!\n"
         );
         // send SYN
-        this->SendSynRequest();
+        this->Synchronize();
         // start waiting incoming calls
         this->Read();
     }
@@ -111,22 +111,23 @@ void Client::OnRead(
         // m_inbox.commit(transferredBytes);
         
         const auto data { m_inbox.data() }; // asio::streambuf::const_buffers_type
-        std::string recieved {
+        std::string received {
             asio::buffers_begin(data), 
             asio::buffers_begin(data) + transferredBytes - Internal::MESSAGE_DELIMITER.size()
         };
         
         m_inbox.consume(transferredBytes);
         
-        const auto incomingResponse = Internal::Read(recieved);
+        Internal::Response incomingResponse;
+        incomingResponse.Read(received);
         
         boost::system::error_code error; 
         m_logger.Write( 
             LogType::info, 
-            m_socket.remote_endpoint(error), ": ", recieved, '\n' 
+            m_socket.remote_endpoint(error), ": ", received, '\n' 
         );
 
-        this->HandleMessage(*incomingResponse);
+        this->HandleMessage(incomingResponse);
         this->Read();
     } 
     else {
@@ -191,11 +192,11 @@ static bool Proccess(const char * key, const char* accepted) noexcept {
     return true;
 }
 
-void Client::SendSynRequest() {
+void Client::Synchronize() {
     Internal::Request request;
     request.m_timeout = 30;
     request.m_timestamp = Utils::GetTimestamp();
-    request.m_type = Internal::QueryType::SYN;
+    request.m_query = Internal::QueryType::SYN;
     
     rapidjson::Document d;
     const char* key = "234A$F(K(J@Jjsij2dk2k(@#KDfikwoik";
@@ -212,59 +213,49 @@ void Client::SendSynRequest() {
     m_state = State::WAIT_ACK;
 }
 
-void Client::HandleMessage(Internal::Message& msg) {
-    const auto protocol { std::string(msg.GetProtocol()) };
-    if( protocol == Internal::Chat::PROTOCOL) {
-        const auto chat = dynamic_cast<Internal::Chat *>(&msg);
-        if( m_state == State::RECIEVE_ACK ) {
-            // confirm we're at room
-            m_gui.UpdateChat(std::move(*chat));
-        }
-    }
-    else if( protocol == Internal::Response::PROTOCOL) {
-        const auto response = dynamic_cast<Internal::Response *>(&msg);
-        switch(m_state) {
-            case State::WAIT_ACK: 
-            {
-                if(response->m_type == Internal::QueryType::ACK) {
-                    // confirm status
-                    // confirm whether it's our server (proccessing the key)
-                    if( ::Proccess(nullptr, nullptr) ) { // it's temporary
-                        m_state = State::RECIEVE_ACK;
-                        m_gui.UpdateResponse(std::move(*response));
-                    }
-                }
-                else {
-                    this->Close();
-                }
-            } break;
-            case State::RECIEVE_ACK: 
-            {
-                switch(response->m_type) {
-                    case Internal::QueryType::ACK: {
-                        // error
-                        m_gui.UpdateResponse(std::move(*response));
-                    } break;
-                    case Internal::QueryType::LIST_CHATROOM: {   
-                        m_gui.UpdateResponse(std::move(*response));
-                    } break;
-                    case Internal::QueryType::JOIN_CHATROOM: {
-                        m_gui.UpdateResponse(std::move(*response));
-                    } break;
-                    case Internal::QueryType::CREATE_CHATROOM: {
-                        m_gui.UpdateResponse(std::move(*response));
-                    } break;
-                    case Internal::QueryType::LEAVE_CHATROOM: {
-                        m_gui.UpdateResponse(std::move(*response));
-                    } break;
-                    default: break;
-                }
-            } break;
-            case State::CLOSED: break;
-            default: break;
-        }
-    }
-    else {
-        // error
+void Client::HandleMessage(Internal::Response& response) {
+    switch(m_state) {
+        case State::WAIT_ACK: 
+        {
+            bool isAckQuery { response.m_query == Internal::QueryType::ACK };
+            bool hasValidStatus { response.m_status == 101 };
+            bool hasValidKey { ::Proccess(nullptr, nullptr) };
+            // confirm status
+            // confirm whether it's our server (proccessing the key)
+            if( isAckQuery && hasValidStatus && hasValidKey) { // it's temporary
+                m_state = State::RECIEVE_ACK;
+                m_gui.UpdateResponse(std::move(response));
+            } 
+            else {
+                this->Close();
+            }
+        } break;
+        case State::RECIEVE_ACK: 
+        {
+            switch(response.m_query) {
+                case Internal::QueryType::ACK: {
+                    // error
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                case Internal::QueryType::LIST_CHATROOM: {   
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                case Internal::QueryType::JOIN_CHATROOM: {
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                case Internal::QueryType::CREATE_CHATROOM: {
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                case Internal::QueryType::LEAVE_CHATROOM: {
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                case Internal::QueryType::CHAT_MESSAGE: {
+                    m_gui.UpdateResponse(std::move(response));
+                } break;
+                default: break;
+            }
+        } break;
+        case State::CLOSED: break;
+        default: break;
     }
 }

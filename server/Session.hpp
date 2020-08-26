@@ -66,7 +66,6 @@ private:
 
     bool LeaveChatroom();
     
-    
     /**
      * Read data from the remote connection.
      * At first it's invoked at server's `on accept` completion handler.
@@ -95,39 +94,23 @@ private:
     );
 
     /**
-     * Process incoming message base on protocol.
-     * @param msg
-     *  This is incoming message.
-     */
-    void HandleMessage(const Internal::Message& msg);
-    
-    /**
      * Build reply base on incoming request
      * 
      * @param request
      *  This is request which came from the remote peer. 
-     * @return 
-     *  Return serialized reply(response format) build base on @request
      */
-    std::string HandleRequest(const Internal::Request* request);
+    void HandleRequest(const Internal::Request& request);
 
-    /**
-     * Handle incoming chat message
-     * 
-     * @param chat
-     *  This is chat message which came from the remote peer. 
-     */
-    void HandleChat(const Internal::Chat* chat);
 
     /// Minor Helper functions
 
     /**
-     * This is a method which builds response only for incoming SYNCHRONIZATION requests. 
+     * This is a method which builds response only for incoming SYN request. 
      * @param request
      *  This is incoming (from the remote peer) request: first step of the handshake.
      * @return 
      *  Return respose base on processed request. If everything is fine, 
-     *  respose will have an ACKNOWLEDGEMENT.
+     *  response will have an ACK query type.
      */
     Internal::Response HandleSyncRequest(const Internal::Request& request);
     
@@ -141,7 +124,7 @@ private:
          */
         WAIT_SYNCHRONIZE_REQUEST,
         /**
-         * This is a state when a session has already recieved
+         * This is a state when a session has already received
          * the SYN request, no problems have been occured
          * with the request and ACK response was sent. 
          */
