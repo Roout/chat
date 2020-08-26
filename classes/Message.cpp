@@ -16,6 +16,7 @@ namespace {
             { Internal::QueryType::JOIN_CHATROOM,     "join-chatroom" },
             { Internal::QueryType::CREATE_CHATROOM,   "create-chatroom" },
             { Internal::QueryType::LIST_CHATROOM,     "list-chatroom" },
+            { Internal::QueryType::CHAT_MESSAGE,      "chat-message" },
             { Internal::QueryType::SYN,               "syn" },
             { Internal::QueryType::ACK,               "ack" }
         };
@@ -29,6 +30,7 @@ namespace {
             { "leave-chatroom",     Internal::QueryType::LEAVE_CHATROOM },
             { "create-chatroom",    Internal::QueryType::CREATE_CHATROOM },
             { "list-chatroom",      Internal::QueryType::LIST_CHATROOM },
+            { "chat_message",       Internal::QueryType::CHAT_MESSAGE },
             { "syn",                Internal::QueryType::SYN },
             { "ack",                Internal::QueryType::ACK }
         };
@@ -38,8 +40,11 @@ namespace {
 
 namespace Internal {
 
-    void Request::Read(rapidjson::Document& doc) {
-        m_type = ::AsQueryType(doc["type"].GetString());
+    void Request::Read(const std::string& json) {
+        rapidjson::Document doc;
+        doc.Parse(json.c_str());
+
+        m_query = ::AsQueryType(doc["query"].GetString());
         m_timestamp = doc["timestamp"].GetInt64();
         m_timeout = doc["timeout"].GetUint64();
 
@@ -57,16 +62,10 @@ namespace Internal {
         doc.SetObject();
 
         rapidjson::Value value;
-        
-        value.SetString(PROTOCOL, alloc);
-        doc.AddMember("protocol", value, alloc);
-
-        value.SetString(TAG, alloc);
-        doc.AddMember("tag", value, alloc);
-
-        const auto type = ::AsString(m_type);
-        value.SetString(type.c_str(), alloc);
-        doc.AddMember("type", value, alloc);
+     
+        const auto query = ::AsString(m_query);
+        value.SetString(query.c_str(), alloc);
+        doc.AddMember("query", value, alloc);
 
         value.SetInt64(m_timestamp);
         doc.AddMember("timestamp", value, alloc);
@@ -89,8 +88,11 @@ namespace Internal {
         json += MESSAGE_DELIMITER;
     }
     
-    void Response::Read(rapidjson::Document& doc) {
-        m_type = ::AsQueryType(doc["type"].GetString());
+    void Response::Read(const std::string & json) {
+        rapidjson::Document doc;
+        doc.Parse(json.c_str());
+
+        m_query = ::AsQueryType(doc["query"].GetString());
         m_timestamp = doc["timestamp"].GetInt64();
         m_status = doc["status"].GetInt();
         
@@ -114,16 +116,10 @@ namespace Internal {
         doc.SetObject();
 
         rapidjson::Value value;
-        
-        value.SetString(PROTOCOL, alloc);
-        doc.AddMember("protocol", value, alloc);
-
-        value.SetString(TAG, alloc);
-        doc.AddMember("tag", value, alloc);
-
-        const auto type = ::AsString(m_type);
-        value.SetString(type.c_str(), alloc);
-        doc.AddMember("type", value, alloc);
+    
+        const auto query = ::AsString(m_query);
+        value.SetString(query.c_str(), alloc);
+        doc.AddMember("query", value, alloc);
 
         value.SetInt64(m_timestamp);
         doc.AddMember("timestamp", value, alloc);
@@ -150,59 +146,5 @@ namespace Internal {
         }
         json += MESSAGE_DELIMITER;
     }
-
-    void Chat::Read(rapidjson::Document& doc) {
-        m_timestamp = doc["timestamp"].GetInt64();
-        m_timeout = doc["timeout"].GetUint64();
-        m_message = doc["message"].GetString();
-    }
-
-    void Chat::Write(std::string& json) {
-        rapidjson::Document doc;
-        auto& alloc = doc.GetAllocator();
-        doc.SetObject();
-
-        rapidjson::Value value;
-        
-        value.SetString(PROTOCOL, alloc);
-        doc.AddMember("protocol", value, alloc);
-
-        value.SetString(TAG, alloc);
-        doc.AddMember("tag", value, alloc);
-
-        value.SetInt64(m_timestamp);
-        doc.AddMember("timestamp", value, alloc);
-
-        value.SetUint64(m_timeout);
-        doc.AddMember("timeout", value, alloc);
-
-        value.SetString(m_message.c_str(), alloc);
-        doc.AddMember("message", value, alloc);
-
-        // read to string:
-        rapidjson::StringBuffer buffer;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-        doc.Accept(writer);
-
-        json = std::string(buffer.GetString(), buffer.GetLength());
-        json += MESSAGE_DELIMITER;
-    }
-
-    std::unique_ptr<Message> Read(const std::string& json) {
-        rapidjson::Document doc;
-        doc.Parse(json.c_str());
-        const std::string tag = doc["tag"].GetString();
-        // dispatch base on tag
-        std::unique_ptr<Message> message {};
-        if( tag == Response::TAG ) {
-            message = std::make_unique<Response>();
-        } else if( tag == Request::TAG ) {
-            message = std::make_unique<Request>();
-        } else if( tag == Chat::TAG ) {
-            message = std::make_unique<Chat>();
-        }
-        message->Read(doc);
-        return message;
-    }
-
+    
 };

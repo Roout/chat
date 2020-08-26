@@ -18,6 +18,7 @@ namespace Internal {
         JOIN_CHATROOM,
         CREATE_CHATROOM,
         LIST_CHATROOM,
+        CHAT_MESSAGE,
 
         COUNT
     };
