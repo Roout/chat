@@ -48,11 +48,11 @@ public:
     }
     
     bool IsWaitingSyn() const noexcept {
-        return m_state == State::WAIT_SYNCHRONIZE_REQUEST;
+        return m_state == State::WAIT_SYN;
     }
 
     bool IsAcknowleged() const noexcept {
-        return m_state == State::SENT_ACKNOWLEDGED_RESPONSE;
+        return m_state == State::ACKNOWLEDGED;
     }
     
     /**
@@ -122,13 +122,13 @@ private:
          * and initiate deadline timer waiting for the SYN 
          * request. 
          */
-        WAIT_SYNCHRONIZE_REQUEST,
+        WAIT_SYN,
         /**
          * This is a state when a session has already received
          * the SYN request, no problems have been occured
          * with the request and ACK response was sent. 
          */
-        SENT_ACKNOWLEDGED_RESPONSE,
+        ACKNOWLEDGED,
         /**
          * This is a state when a connection between peers 
          * was terminated/closed or hasn't even started. 
@@ -168,7 +168,7 @@ private:
      * This is indication of the current state of this session,
      * i.e. stage of communication.  
      */
-    State m_state { State::WAIT_SYNCHRONIZE_REQUEST };
+    State m_state { State::WAIT_SYN };
 
     /**
      * This is a timer used to set up deadline for the client
@@ -181,7 +181,7 @@ private:
      * Define hom long the session can wait for the SYN request 
      * from the client. Time is in milliseconds.
      */
-    std::size_t m_waitSynTimeout { 128 };
+    std::size_t m_synTime { 128 };
 };
 
 

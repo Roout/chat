@@ -5,11 +5,10 @@
 #include <iostream>
 #include <string>
 #include "QueryType.hpp"
-#include "../rapidjson/document.h"
 
 namespace Internal {
     
-    // Double CRLF as delimeter
+    // Double CRLF as delimiter
     const std::string MESSAGE_DELIMITER { "\r\n\r\n" };
     
     /**

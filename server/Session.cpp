@@ -90,7 +90,7 @@ void Session::WaitSynchronizationRequest() {
     // start reading requests
     this->Read();
     // set up deadline timer for the SYN request from the accepted connection
-    m_timer.expires_from_now(boost::posix_time::milliseconds(m_waitSynTimeout));
+    m_timer.expires_from_now(boost::posix_time::milliseconds(m_synTime));
     m_timer.async_wait(
         asio::bind_executor(
             m_strand, 
@@ -243,7 +243,7 @@ Internal::Response Session::HandleSyncRequest(const Internal::Request& request) 
 void Session::HandleRequest(const Internal::Request& request) {
     Internal::Response reply {};
     switch(m_state) {
-        case State::WAIT_SYNCHRONIZE_REQUEST:
+        case State::WAIT_SYN:
             if(request.m_query != Internal::QueryType::SYN) {
                 // create response with error description
                 reply.m_status = 404; // TODO: define apropriate statuses
@@ -254,10 +254,10 @@ void Session::HandleRequest(const Internal::Request& request) {
                 reply = this->HandleSyncRequest(request);
                 // TODO: between this state update and actual writing to the socket exception can be raised! 
                 // CHECK for the basic safety
-                m_state = State::SENT_ACKNOWLEDGED_RESPONSE;
+                m_state = State::ACKNOWLEDGED;
             }
             break;
-        case State::SENT_ACKNOWLEDGED_RESPONSE: 
+        case State::ACKNOWLEDGED: 
             {
                 switch(request.m_query) {
                     case Internal::QueryType::LEAVE_CHATROOM:
