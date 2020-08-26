@@ -85,24 +85,15 @@ TEST_F(BasicInteractionTest, OnlyFixureSetup) {
     // test
     ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
 }
 
-/**
- *  Request:
- *  {	
- *      "protocol": "SRR",
- *      "type": "list-chatrooms",
- *      "timestamp": 344678435266,
- *      "timeout": 30
- *  } 
- */
 TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 0. Confirm Handshake
     this->WaitFor(m_waitAckTimeout);
-    EXPECT_TRUE(m_client->IsAcknowleged())
+    ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
 
     /// 1. Server creates chatrooms
     struct MockChatroom {
@@ -114,6 +105,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
             return id == rhs.id && users == rhs.users && name == rhs.name;
         }
     };
+
     std::array<MockChatroom, 2> expectedRooms;
     expectedRooms[0].name = "WoW 3.3.5a";
     expectedRooms[0].id = m_server->CreateChatroom(expectedRooms[0].name);
@@ -122,7 +114,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
  
     /// 2. Request chatroom list
     Internal::Request listRequest{};
-    listRequest.m_type = Internal::QueryType::LIST_CHATROOM;
+    listRequest.m_query = Internal::QueryType::LIST_CHATROOM;
     listRequest.m_timestamp = Utils::GetTimestamp();
     listRequest.m_timeout = 30;
     std::string serialized {};
@@ -147,8 +139,8 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
         recievedRooms[i].users = roomObj["users"].GetUint64(); 
         i++;
     }
-    /// 4. Compare expected result and recieved response
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::LIST_CHATROOM);
+    /// 4. Compare expected result and received response
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::LIST_CHATROOM);
     for(std::size_t i = 0; i < expectedRooms.size(); i++) {
         EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
     }
@@ -160,7 +152,7 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     this->WaitFor(m_waitAckTimeout);
     ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
 
     
     /// #1 Create chatrooms
@@ -172,7 +164,7 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     
     // #2 Join Chatroom
     Internal::Request request{};
-    request.m_type = Internal::QueryType::JOIN_CHATROOM;
+    request.m_query = Internal::QueryType::JOIN_CHATROOM;
     request.m_timeout = 30;
     request.m_timestamp = Utils::GetTimestamp();
     // Set up body
@@ -199,7 +191,7 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     // #3 Confirm that we've joined
     const auto& joinReply = m_client->GetGUI().GetResponse();
 
-    EXPECT_EQ(joinReply.m_type, Internal::QueryType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
     EXPECT_TRUE(joinReply.m_attachment.empty());
 }
@@ -210,7 +202,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     this->WaitFor(m_waitAckTimeout);
     ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
 
     /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
@@ -220,7 +212,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     
     // #2 Join Chatroom
     Internal::Request request{};
-    request.m_type = Internal::QueryType::CREATE_CHATROOM;
+    request.m_query = Internal::QueryType::CREATE_CHATROOM;
     request.m_timeout = 30;
     request.m_timestamp = Utils::GetTimestamp();
     // Set up body
@@ -247,7 +239,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     // #3 Confirm that we've joined
     const auto& joinReply = m_client->GetGUI().GetResponse();
 
-    EXPECT_EQ(joinReply.m_type, Internal::QueryType::CREATE_CHATROOM);
+    EXPECT_EQ(joinReply.m_query, Internal::QueryType::CREATE_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
     EXPECT_TRUE(!joinReply.m_attachment.empty());
 
@@ -283,7 +275,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     this->WaitFor(m_waitAckTimeout);
     ASSERT_TRUE(m_client->IsAcknowleged())
         << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_type, Internal::QueryType::ACK);
+    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
 
     /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
@@ -294,7 +286,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     
     // #2 Join Chatroom
     Internal::Request request{};
-    request.m_type = Internal::QueryType::JOIN_CHATROOM;
+    request.m_query = Internal::QueryType::JOIN_CHATROOM;
     request.m_timeout = 30;
     request.m_timestamp = Utils::GetTimestamp();
     // Set up body
@@ -321,7 +313,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     // #3 Confirm that we've joined
     const auto& joinReply = m_client->GetGUI().GetResponse();
 
-    EXPECT_EQ(joinReply.m_type, Internal::QueryType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
@@ -335,7 +327,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     
     /// #5 Leave chatroom
     Internal::Request leaveRequest{};
-    leaveRequest.m_type = Internal::QueryType::LEAVE_CHATROOM;
+    leaveRequest.m_query = Internal::QueryType::LEAVE_CHATROOM;
     leaveRequest.m_timeout = 30;
     leaveRequest.m_timestamp = Utils::GetTimestamp();
     // send request
