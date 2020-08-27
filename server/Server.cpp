@@ -56,16 +56,16 @@ bool Server::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Sessio
         // TODO: can't find session in chatroom for unAuth
     }
     // find chatroom with required id
-    const auto chat = m_chatrooms.find(chatroomId);
+    const auto it = m_chatrooms.find(chatroomId);
     // if chatroom is found then try to assign session to chatroom
-    if( chat != m_chatrooms.end() ) {
+    if( it != m_chatrooms.end() ) {
         // if chatroom was assigned successfully return true otherwise false
-        if( chat->second.AddSession(session) ) {
+        if( it->second.AddSession(session) ) {
             return true;
         } 
         else { // failed to join chatroom, go back to hall
-            const auto result = m_hall.AddSession(session);
-            if( !result ) {
+            const auto isAdded = m_hall.AddSession(session);
+            if( !isAdded ) {
                 // some weird error!
             }
         }
