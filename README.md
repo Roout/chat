@@ -14,7 +14,7 @@ TCP protocol will be used.
 # Done
 - [x] read data from client
 - [x] pass read data to server
-- [x] broadcast recieved data to all clients
+- [x] broadcast received data to all clients
 - [x] timely remove all connections that were closed
 
 # TODO #1
@@ -24,11 +24,11 @@ Safe disconnection should be achieved by catching exception from io_context so
 it need to be wrapped in try-catch block.
 - [x] Fix errors and add multithreading safety:
 
-[Good answer](https://stackoverflow.com/a/40588070/11468611)
+[Good answer](https://stackoverflow.com/a/40588070/11468611)  
 1. Concurrent execution of functions that access the same socket.
 2. Concurrent execution of delegates that enclose the same socket.
 3. Interleaved execution of delegates that write to the same socket.  
-[About async_write](https://www.boost.org/doc/libs/1_73_0/doc/html/boost_asio/reference/async_write/overload7.html)
+[About async_write](https://www.boost.org/doc/libs/1_73_0/doc/html/boost_asio/reference/async_write/overload7.html)  
 
 - [x] strand for callbacks (solve the issue #1)
     Reasons (same for the client and session)

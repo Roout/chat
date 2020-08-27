@@ -22,7 +22,6 @@ Session::Session(
     m_socket { std::move(socket) },
     m_server { server },
     m_strand { *server->m_context },
-    m_user {},
     m_timer { *server->m_context }
 {
     m_user.m_chatroom = chat::Chatroom::NO_ROOM;
@@ -75,13 +74,11 @@ void Session::Read() {
 void Session::ExpiredDeadlineHandler(
     const boost::system::error_code& error
 ) {
-    const bool isCanceled { error == boost::asio::error::operation_aborted };
-    if( !error || isCanceled ) {
-        if( IsWaitingSyn() ) {
-            m_server->Write(LogType::info, "Connection has been closed due to timeout.");
-            Close();
-        }
-        // otherwise the session is either already acknowledged either closed/disconnected. 
+    bool isCanceled { error == boost::asio::error::operation_aborted };
+    bool endWithoutError = !error || isCanceled;
+    if( endWithoutError && this->IsWaitingSyn() ) {
+        m_server->Write(LogType::info, "Connection has been closed due to timeout.");
+        this->Close();
     } 
     else {
         // TODO: some weird error
@@ -121,7 +118,6 @@ void Session::Close() {
             "Session's socket is being closed with error: ", ec.message(), '\n'
         );
     } 
-
     m_state = State::DISCONNECTED;
 }
 
@@ -133,9 +129,6 @@ void Session::ReadSomeHandler(
         m_server->Write(LogType::info, 
             "Session just recive: ", transferredBytes, " bytes.\n"
         );
-        // boost::asio::async_read_until calls commit by itself
-        // m_inbox.commit(transferredBytes);
-        
         const auto data { m_inbox.data() };
         std::string received {
             asio::buffers_begin(data), 
@@ -170,7 +163,7 @@ void Session::WriteSomeHandler(
             "Session sent: ", transferredBytes, " bytes.\n"
         );
 
-        if( m_outbox.GetQueueSize() ) {
+        if(m_outbox.GetQueueSize()) {
             // we need to Write other data
             m_server->Write(LogType::info, 
                 "Session need to Write ", m_outbox.GetQueueSize(), " messages.\n"
@@ -178,7 +171,8 @@ void Session::WriteSomeHandler(
             asio::post(m_strand, [self = shared_from_this()](){
                 self->Write();
             }); 
-        } else {
+        } 
+        else {
             m_isWriting = false;
         }
     } 
@@ -194,7 +188,7 @@ void Session::WriteSomeHandler(
 
 bool Session::AssignChatroom(std::size_t id) {
     bool isAssigned = m_server->AssignChatroom(id, shared_from_this());
-    if( isAssigned ) {
+    if(isAssigned) {
         m_user.m_chatroom = id;
     }
     return isAssigned;
@@ -251,4 +245,5 @@ void Session::HandleRequest(const Internal::Request& request) {
             executor->Run();
         } break;
     }
+    /// TODO: handle unexpected request
 }

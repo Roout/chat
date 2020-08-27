@@ -39,5 +39,6 @@ int main() {
 	for(auto& t: ts) {
 		t.join();
 	}
-	return 0;
+
+	return EXIT_SUCCESS;
 }

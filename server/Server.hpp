@@ -62,7 +62,7 @@ public:
         -> std::optional<std::tuple<std::size_t, std::size_t, std::string>>
     {
         std::lock_guard<std::mutex> lock (m_mutex);
-        if( auto it = m_chatrooms.find(id); it != m_chatrooms.end() ) {
+        if(auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
             auto tuple = std::make_tuple(
                 it->second.GetId(), 
                 it->second.GetSessionCount(), 

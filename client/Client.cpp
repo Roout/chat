@@ -42,7 +42,6 @@ void Client::Connect(const std::string& path, std::uint16_t port) {
 void Client::Write(std::string && text ) {
     // using strand we prevent concurrent access to variables and 
     // concurrent writing to socket. 
-    /// TODO: make sure that pointer @this is valid.
     asio::post(m_strand, [text = std::move(text), this]() mutable {
         m_outbox.Enque(std::move(text));
         if(!m_isWriting) {
@@ -52,32 +51,32 @@ void Client::Write(std::string && text ) {
 }
 
 void Client::Close() {
-    boost::system::error_code ec;
-    m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    if(ec) {
-
+    boost::system::error_code error;
+    m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, error);
+    if(error) {
+        m_logger.Write(LogType::error, 
+            "Client's socket called shutdown with error: ", error.message(), '\n'
+        );
+        error.clear();
     }
-    ec.clear();
     
-    m_socket.close(ec);
-    if(ec) {
-
+    m_socket.close(error);
+    if(error) {
+        m_logger.Write(LogType::error, 
+            "Client's socket is being closed with error: ", error.message(), '\n'
+        );
     }
     m_state = State::CLOSED;
 }
 
-void Client::OnConnect(const boost::system::error_code& err) {
-    if(err) {
-        m_logger.Write( 
-            LogType::error, 
-            "Client failed to connect with error: ", err.message(), "\n" 
+void Client::OnConnect(const boost::system::error_code& error) {
+    if(error) {
+        m_logger.Write(LogType::error, 
+            "Client failed to connect with error: ", error.message(), "\n" 
         );
     } 
     else {
-        m_logger.Write( 
-            LogType::info, 
-            "Client connected successfully!\n"
-        );
+        m_logger.Write(LogType::info, "Client connected successfully!\n");
         // send SYN
         this->Synchronize();
         // start waiting incoming calls
@@ -101,14 +100,10 @@ void Client::OnRead(
     const boost::system::error_code& error, 
     std::size_t transferredBytes
 ) {
-    if( !error ) {
-        m_logger.Write( 
-            LogType::info, 
+    if(!error) {
+        m_logger.Write(LogType::info, 
             "Client just recive: ", transferredBytes, " bytes.\n"
         );
-        
-        // boost::asio::async_read_until calls commit by itself 
-        // m_inbox.commit(transferredBytes);
         
         const auto data { m_inbox.data() }; // asio::streambuf::const_buffers_type
         std::string received {
@@ -131,8 +126,7 @@ void Client::OnRead(
         this->Read();
     } 
     else {
-        m_logger.Write( 
-            LogType::error, 
+        m_logger.Write(LogType::error, 
             "Client failed to read with error: ", error.message(), "\n"
         );
         this->Close();
@@ -145,9 +139,8 @@ void Client::OnWrite(
 ) {
     using namespace std::placeholders;
 
-    if( !error ) {
-        m_logger.Write( 
-            LogType::info, 
+    if(!error) {
+        m_logger.Write(LogType::info, 
             "Client just sent: ", transferredBytes, " bytes\n"
         );
 
@@ -163,8 +156,7 @@ void Client::OnWrite(
     } 
     else {
         m_isWriting = false;
-        m_logger.Write( 
-            LogType::error, 
+        m_logger.Write(LogType::error, 
             "Client has error on writting: ", error.message(), '\n'
         );
         this->Close();
@@ -188,10 +180,6 @@ void Client::Write() {
     );
 }
 
-static bool Proccess(const char * key, const char* accepted) noexcept {
-    return true;
-}
-
 void Client::Synchronize() {
     Internal::Request request;
     request.m_timeout = 30;
@@ -213,10 +201,14 @@ void Client::Synchronize() {
     m_state = State::WAIT_ACK;
 }
 
+/// TODO: remove this temporary stuff
+static bool Proccess(const char * key, const char* accepted) noexcept {
+    return true;
+}
+
 void Client::HandleMessage(Internal::Response& response) {
     switch(m_state) {
-        case State::WAIT_ACK: 
-        {
+        case State::WAIT_ACK: {
             bool isAckQuery { response.m_query == Internal::QueryType::ACK };
             bool hasValidStatus { response.m_status == 200 };
             bool hasValidKey { ::Proccess(nullptr, nullptr) };
@@ -230,11 +222,9 @@ void Client::HandleMessage(Internal::Response& response) {
                 this->Close();
             }
         } break;
-        case State::RECIEVE_ACK: 
-        {
+        case State::RECIEVE_ACK: {
             switch(response.m_query) {
                 case Internal::QueryType::ACK: {
-                    // error
                     m_gui.UpdateResponse(std::move(response));
                 } break;
                 case Internal::QueryType::LIST_CHATROOM: {   

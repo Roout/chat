@@ -32,5 +32,5 @@ int main() {
 		t.join();
 	}
 	
-	return 0;
+	return EXIT_SUCCESS;
 }

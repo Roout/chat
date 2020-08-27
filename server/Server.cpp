@@ -15,14 +15,12 @@ void Server::Start() {
         // No need to avoid TIME_WAIT state which possibly will tie the port
         asio::ip::tcp::acceptor::reuse_address(false)
     );
-
     m_acceptor.async_accept( *m_socket, [this](const boost::system::error_code& code ) {
         if( !code ) {
             boost::system::error_code err; 
             this->Write(LogType::info, 
                 "Server accepted connection on endpoint: ", m_socket->remote_endpoint(err), "\n"
-            );
-            
+            ); 
             const auto newSession { std::make_shared<Session>(std::move(*m_socket), this) };
             newSession->WaitSynchronizationRequest();
             if(!m_hall.AddSession(newSession)) {
@@ -42,7 +40,6 @@ void Server::Shutdown() {
             "Server closed acceptor with error: ", ec.message(), "\n"
         );
     }
-
     std::lock_guard<std::mutex> lock(m_mutex);
     m_hall.Close();
     for(auto& [id, chat]: m_chatrooms) chat.Close();
@@ -74,18 +71,13 @@ bool Server::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Sessio
 }
 
 void Server::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
-
     // Check whether it's a hall chatroom
     if( chatroomId == m_hall.GetId()) {
         /// TODO: user can't leave hall!
         return;
-    } 
-    
+    }     
     std::lock_guard<std::mutex> lock(m_mutex);
-
-    const auto chat = m_chatrooms.find(chatroomId);
-
-    if( chat != m_chatrooms.end() ) {
+    if( const auto chat = m_chatrooms.find(chatroomId); chat != m_chatrooms.end() ) {
         if( chat->second.RemoveSession(session.get()) ) {
             if( this->IsEmpty(chatroomId) ) {
                 this->RemoveChatroom(chatroomId, false);
@@ -103,7 +95,7 @@ std::vector<std::string> Server::GetChatroomList() const noexcept {
     list.reserve(m_chatrooms.size());
 
     std::unique_lock<std::mutex> lock(m_mutex, std::try_to_lock);
-    for(auto& [id, chatroom] : m_chatrooms) {
+    for(const auto& [id, chatroom] : m_chatrooms) {
         list.emplace_back(chatroom.AsJSON());
     }
     lock.unlock();
@@ -121,7 +113,6 @@ std::size_t Server::CreateChatroom(std::string name) {
 
 std::size_t Server::GetChatroom(const Session*const session) const noexcept {
     std::lock_guard<std::mutex> lock(m_mutex);
-
     // check the hall
     if( m_hall.Contains(session) ) {
         return m_hall.GetId();
@@ -132,13 +123,11 @@ std::size_t Server::GetChatroom(const Session*const session) const noexcept {
             return id;
         }
     }
-
     return chat::Chatroom::NO_ROOM;
 }
 
 bool Server::ExistChatroom(std::size_t id) const noexcept {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
+    std::lock_guard<std::mutex> lock(m_mutex);  
     return m_chatrooms.find(id) != m_chatrooms.cend();
 }
 

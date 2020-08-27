@@ -30,6 +30,9 @@ public:
         }
     };
 
+    /**
+     * Invoked to initiate a communication with client 
+     */
     void WaitSynchronizationRequest();
 
     /**
@@ -55,7 +58,9 @@ public:
         return m_state == State::ACKNOWLEDGED;
     }
     
-    /// TODO: change 
+
+    /// Interface used by response handlers
+    /// TODO: Delegate this responsibility to other class 
     void AcknowledgeClient() noexcept {
         m_state = State::ACKNOWLEDGED;
     }

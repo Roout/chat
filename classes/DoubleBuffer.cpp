@@ -1,6 +1,6 @@
 #include "DoubleBuffer.hpp"
 
-Buffers::Buffers(std::size_t reserved ) {
+Buffers::Buffers(std::size_t reserved) {
     m_buffers[0].reserve(reserved);
     m_buffers[1].reserve(reserved);
     m_bufferSequence.reserve(reserved);

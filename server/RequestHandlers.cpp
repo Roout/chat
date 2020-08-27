@@ -9,7 +9,6 @@
 #include "../rapidjson/writer.h"
 #include "../rapidjson/stringbuffer.h"
 
-
 template<class Encoding, class Allocator>
 std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value) {
     rapidjson::StringBuffer buffer;
@@ -35,15 +34,13 @@ namespace RequestHandlers {
 
     void Executor::SendResponse() {
         // make timestamp
-        m_reply.m_timestamp = Utils::GetTimestamp();
-        
+        m_reply.m_timestamp = Utils::GetTimestamp();        
         // send
         std::string m_replyStr {};
         m_reply.Write(m_replyStr);
-        // Que m_reply for send operation!
+        // que m_reply for send operation!
         m_service->Write(m_replyStr);
     }
-
 
     bool Sync::IsValidRequest() {
         /// TODO: check incoming key
@@ -60,7 +57,6 @@ namespace RequestHandlers {
 
     void Sync::ExecuteRequest() {
         // proccessed key and generate answer
-
         // add accept field to attachment
         rapidjson::Document reader;
         auto& alloc = reader.GetAllocator();
@@ -87,7 +83,6 @@ namespace RequestHandlers {
             m_reply.m_status = 424; // Failed Dependency
             m_reply.m_error = "Require acknowledgement";
         }
-
         return m_reply.m_status == 200;
     };
 

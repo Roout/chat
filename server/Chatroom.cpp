@@ -39,122 +39,122 @@ namespace chat {
         m_name { name }
     {}
 
-}
+    Chatroom::Chatroom() :
+        m_impl { std::make_unique<Impl>() }
+    { // default ctor
+    }
 
-chat::Chatroom::Chatroom() :
-    m_impl { std::make_unique<Impl>() }
-{ // default ctor
-}
+    Chatroom::Chatroom(const std::string & name) :
+        m_impl { std::make_unique<Impl>(name) }
+    {
+    }
 
-chat::Chatroom::Chatroom(const std::string & name) :
-    m_impl { std::make_unique<Impl>(name) }
-{
-}
+    Chatroom::Chatroom(Chatroom&&rhs) = default;
 
-chat::Chatroom::Chatroom(chat::Chatroom&&rhs) = default;
+    Chatroom & Chatroom::operator=(Chatroom&&rhs) = default;
 
-chat::Chatroom & chat::Chatroom::operator=(Chatroom&&rhs) = default;
+    Chatroom::~Chatroom() = default;
 
-chat::Chatroom::~Chatroom() = default;
+    void Chatroom::Close() {
+        for(auto& s: m_impl->m_sessions) {
+            if(s) s->Close();
+        };
+    }
 
-void chat::Chatroom::Close() {
-    for(auto& s: m_impl->m_sessions) {
-        if(s) s->Close();
-    };
-}
+    std::size_t Chatroom::GetId() const noexcept {
+        return m_impl->m_id;
+    } 
 
-std::size_t chat::Chatroom::GetId() const noexcept {
-    return m_impl->m_id;
-} 
+    std::size_t Chatroom::GetSessionCount() const noexcept {
+        return m_impl->m_users;
+    }
 
-std::size_t chat::Chatroom::GetSessionCount() const noexcept {
-    return m_impl->m_users;
-}
+    const std::string& Chatroom::GetName() const noexcept {
+        return m_impl->m_name;
+    }
 
-const std::string& chat::Chatroom::GetName() const noexcept {
-    return m_impl->m_name;
-}
+    bool Chatroom::AddSession(const std::shared_ptr<Session>& session) {
+        for(auto& s: m_impl->m_sessions) {
+            if(s == false) {
+                s = session;
+                m_impl->m_users++;
+                return true;
+            }
+        }
+        return false;
+    }
 
-bool chat::Chatroom::AddSession(const std::shared_ptr<Session>& session) {
-    for(auto& s: m_impl->m_sessions) {
-        if( !s ) {
-            s = session;
-            m_impl->m_users++;
-            return true;
+    bool Chatroom::RemoveSession(const Session * const session) {
+        for(auto& s: m_impl->m_sessions) {
+            if(s.get() == session) {
+                s.reset();
+                m_impl->m_users--;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool Chatroom::Contains(const Session * const session) const noexcept {
+        for(const auto& s: m_impl->m_sessions) {
+            if(s.get() == session) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool Chatroom::IsEmpty() const noexcept {
+        return this->GetSessionCount() == 0ULL;
+    }
+
+    std::string Chatroom::AsJSON() const {
+        rapidjson::Document doc;
+        doc.SetObject();
+        auto& allocator = doc.GetAllocator();
+
+        doc.AddMember("id", m_impl->m_id, allocator);
+
+        rapidjson::Value value;
+        value.SetString(m_impl->m_name.c_str(), allocator);
+        doc.AddMember("name", value, allocator);
+
+        doc.AddMember("users", this->GetSessionCount(), allocator);
+
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+
+        return buffer.GetString();
+    } 
+
+    void Chatroom::Rename(const std::string& name) {
+        m_impl->m_name = name;
+    }
+
+    void Chatroom::Broadcast(const std::string& text) {
+        for(auto& session: m_impl->m_sessions) {
+            if(session && session->IsClosed()) {
+                session.reset();
+            }
+            else if(session) {
+                session->Write(text);
+            }
         }
     }
-    return false;
-}
 
-bool chat::Chatroom::RemoveSession(const Session * const session) {
-    for(auto& s: m_impl->m_sessions) {
-        if( s.get() == session ) {
-            s.reset();
-            m_impl->m_users--;
-            return true;
+    void Chatroom::Broadcast(
+        const std::string& text, 
+        std::function<bool(const Session&)> predicate
+    ) {
+        for(auto& session: m_impl->m_sessions) {
+            if(session && session->IsClosed()) {
+                session.reset();
+            }
+            else if(session && std::invoke(predicate, *session)) {
+                session->Write(text);
+            }
         }
     }
-    return false;
-}
 
-bool chat::Chatroom::Contains(const Session * const session) const noexcept {
-    for(const auto& s: m_impl->m_sessions) {
-        if( s.get() == session ) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool chat::Chatroom::IsEmpty() const noexcept {
-    return !this->GetSessionCount();
-}
-
-std::string chat::Chatroom::AsJSON() const {
-    rapidjson::Document doc;
-    doc.SetObject();
-    auto& allocator = doc.GetAllocator();
-
-    doc.AddMember("id", m_impl->m_id, allocator);
-
-    rapidjson::Value value;
-    value.SetString(m_impl->m_name.c_str(), allocator);
-    doc.AddMember("name", value, allocator);
-
-    doc.AddMember("users", this->GetSessionCount(), allocator);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    return buffer.GetString();
-} 
-
-void chat::Chatroom::Rename(const std::string& name) {
-    m_impl->m_name = name;
-}
-
-void chat::Chatroom::Broadcast(const std::string& text) {
-     for(auto& session: m_impl->m_sessions) {
-        if(session && session->IsClosed()) {
-            session.reset();
-        }
-        else if (session) {
-            session->Write(text);
-        }
-    }
-}
-
-void chat::Chatroom::Broadcast(
-    const std::string& text, 
-    std::function<bool(const Session&)> predicate
-) {
-    for(auto& session: m_impl->m_sessions) {
-        if(session && session->IsClosed()) {
-            session.reset();
-        }
-        else if ( session && std::invoke(predicate, *session) ) {
-            session->Write(text);
-        }
-    }
-}
+} // namespace chat
