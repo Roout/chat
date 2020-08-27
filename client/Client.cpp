@@ -218,7 +218,7 @@ void Client::HandleMessage(Internal::Response& response) {
         case State::WAIT_ACK: 
         {
             bool isAckQuery { response.m_query == Internal::QueryType::ACK };
-            bool hasValidStatus { response.m_status == 101 };
+            bool hasValidStatus { response.m_status == 200 };
             bool hasValidKey { ::Proccess(nullptr, nullptr) };
             // confirm status
             // confirm whether it's our server (proccessing the key)
