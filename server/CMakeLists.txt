@@ -7,6 +7,7 @@ set ( sources_files
   "Server.cpp"
   "Session.cpp"
   "Chatroom.cpp"
+  "RequestHandlers.cpp"
   "../classes/DoubleBuffer.cpp"
   "../classes/Message.cpp"
   "../classes/User.cpp"
@@ -23,6 +24,7 @@ set ( header_files
   "Server.hpp"
   "Session.hpp"
   "Chatroom.hpp"
+  "RequestHandlers.hpp"
 
   "../rapidjson/document.h"
   "../rapidjson/writer.h"

@@ -55,16 +55,29 @@ public:
         return m_state == State::ACKNOWLEDGED;
     }
     
+    /// TODO: change 
+    void AcknowledgeClient() noexcept {
+        m_state = State::ACKNOWLEDGED;
+    }
+
+    void UpdateUsername(std::string name) {
+        m_user.m_username = std::move(name);
+    }
+
+    bool AssignChatroom(std::size_t id);
+
+    bool LeaveChatroom();
+
+    std::size_t CreateChatroom(const std::string& chatroomName);
+
+    std::vector<std::string> GetChatroomList() const noexcept;
+
     /**
      * Shutdown Session and close the socket  
      */
     void Close();
     
 private:
-
-    bool AssignChatroom(std::size_t id);
-
-    bool LeaveChatroom();
     
     /**
      * Read data from the remote connection.
@@ -101,19 +114,6 @@ private:
      */
     void HandleRequest(const Internal::Request& request);
 
-
-    /// Minor Helper functions
-
-    /**
-     * This is a method which builds response only for incoming SYN request. 
-     * @param request
-     *  This is incoming (from the remote peer) request: first step of the handshake.
-     * @return 
-     *  Return respose base on processed request. If everything is fine, 
-     *  response will have an ACK query type.
-     */
-    Internal::Response HandleSyncRequest(const Internal::Request& request);
-    
     /// Properties
 private:
     enum class State {

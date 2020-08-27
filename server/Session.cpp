@@ -3,6 +3,7 @@
 #include "Message.hpp"
 #include "Utility.hpp"
 #include "Chatroom.hpp"
+#include "RequestHandlers.hpp"
 
 #include <functional>
 #include <array>
@@ -24,6 +25,7 @@ Session::Session(
     m_user {},
     m_timer { *server->m_context }
 {
+    m_user.m_chatroom = chat::Chatroom::NO_ROOM;
 }
 
 void Session::Write(std::string text) {
@@ -191,11 +193,11 @@ void Session::WriteSomeHandler(
 }
 
 bool Session::AssignChatroom(std::size_t id) {
-    const bool result = m_server->AssignChatroom(id, shared_from_this());
-    if( result ) {
+    bool isAssigned = m_server->AssignChatroom(id, shared_from_this());
+    if( isAssigned ) {
         m_user.m_chatroom = id;
     }
-    return result;
+    return isAssigned;
 }
 
 bool Session::LeaveChatroom() {
@@ -208,6 +210,15 @@ bool Session::LeaveChatroom() {
     return false;
 }
 
+std::size_t Session::CreateChatroom(const std::string& chatroomName) {
+    const auto roomId = m_server->CreateChatroom(chatroomName); 
+    return roomId;
+}
+
+std::vector<std::string> Session::GetChatroomList() const noexcept {
+    return m_server->GetChatroomList();
+}
+
 template<class Encoding, class Allocator>
 std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value) {
     rapidjson::StringBuffer buffer;
@@ -216,127 +227,28 @@ std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value)
     return { buffer.GetString(), buffer.GetLength() };
 }
 
-Internal::Response Session::HandleSyncRequest(const Internal::Request& request) {
-    // confirm timeout
-    // confirm that key was sent
-
-    Internal::Response reply;
-    reply.m_status = 101;
-    reply.m_query = Internal::QueryType::ACK;
-    reply.m_timestamp = Utils::GetTimestamp();
-
-    // add accept field
-
-    rapidjson::Document reader;
-    auto& alloc = reader.GetAllocator();
-    reader.Parse(request.m_attachment.c_str());
-
-    const std::string key { reader["key"].GetString() };
-
-    rapidjson::Value writer(rapidjson::kObjectType);
-    writer.AddMember("accept",  rapidjson::Value(key.c_str(), alloc), alloc);
-    reply.m_attachment = ::Serialize(writer);
-
-    return reply;
-}
 
 void Session::HandleRequest(const Internal::Request& request) {
-    Internal::Response reply {};
-    switch(m_state) {
-        case State::WAIT_SYN:
-            if(request.m_query != Internal::QueryType::SYN) {
-                // create response with error description
-                reply.m_status = 404; // TODO: define apropriate statuses
-                reply.m_error = "Expect SYN request";
-                reply.m_timestamp = Utils::GetTimestamp();
-                reply.m_query = Internal::QueryType::ACK;
-            } else {
-                reply = this->HandleSyncRequest(request);
-                // TODO: between this state update and actual writing to the socket exception can be raised! 
-                // CHECK for the basic safety
-                m_state = State::ACKNOWLEDGED;
-            }
-            break;
-        case State::ACKNOWLEDGED: 
-            {
-                switch(request.m_query) {
-                    case Internal::QueryType::LEAVE_CHATROOM:
-                    { 
-                        const auto leftRoom = this->LeaveChatroom();
-                        reply.m_status = 200; 
-                        reply.m_error.clear();
-                        reply.m_timestamp = Utils::GetTimestamp();
-                        reply.m_query = Internal::QueryType::LEAVE_CHATROOM;
-                    } break;
-                    case Internal::QueryType::JOIN_CHATROOM:
-                    {
-                        rapidjson::Document reader;
-                        reader.Parse(request.m_attachment.c_str());
-                        const auto roomId = reader["chatroom"]["id"].GetUint64();
-                        const auto username = reader["user"]["name"].GetString();
-                        m_user.m_username = username;
-                        const auto joined = this->AssignChatroom(roomId); 
-
-                        reply.m_status = 200; 
-                        reply.m_error.clear();
-                        reply.m_timestamp = Utils::GetTimestamp();
-                        reply.m_query = Internal::QueryType::JOIN_CHATROOM; 
-                    } break;
-                    case Internal::QueryType::CREATE_CHATROOM:
-                    {
-                        rapidjson::Document doc;
-                        auto& alloc = doc.GetAllocator();
-                        doc.Parse(request.m_attachment.c_str());
-
-                        const auto room = doc["chatroom"]["name"].GetString();
-                        const auto roomId = m_server->CreateChatroom(room); 
-                        if( roomId != chat::Chatroom::NO_ROOM ) {
-                            m_user.m_username = doc["user"]["name"].GetString();
-                            const auto joined = this->AssignChatroom(roomId); 
-
-                            reply.m_status = joined? 200: 404; 
-                            reply.m_error = joined? "":"Failed to join";
-                            reply.m_timestamp = Utils::GetTimestamp();
-                            reply.m_query = Internal::QueryType::CREATE_CHATROOM; 
-                            if( joined ) {
-                                rapidjson::Value value(rapidjson::kObjectType);
-                                value.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType), alloc);
-                                value["chatroom"].AddMember("id", roomId, alloc);
-                                reply.m_attachment = ::Serialize(value);
-                            }
-                        } else {
-                            reply.m_status = 404; 
-                            reply.m_error = "Failed to create room";
-                            reply.m_timestamp = Utils::GetTimestamp();
-                            reply.m_query = Internal::QueryType::CREATE_CHATROOM; 
-                        }
-                    } break;
-                    case Internal::QueryType::LIST_CHATROOM: {
-                        reply.m_status = 200; 
-                        reply.m_error.clear();
-                        reply.m_timestamp = Utils::GetTimestamp();
-                        reply.m_query = Internal::QueryType::LIST_CHATROOM;
-                        auto list = m_server->GetChatroomList(); 
-                        reply.m_attachment = "{\"chatrooms\":[";
-                        for(auto&& obj: list) {
-                            reply.m_attachment += std::move(obj);
-                            reply.m_attachment += ",";
-                        }
-                        if(!list.empty()) {
-                            reply.m_attachment.pop_back();
-                        }
-                        reply.m_attachment += "]}";
-
-                    } break;
-                }
-            } break;
-        case State::DISCONNECTED: break;
-        default: break;
-    };
-
-    std::string replyStr {};
-    reply.Write(replyStr);
-
-    // Que reply for send operation!
-    this->Write(replyStr);
+    switch(request.m_query) {
+        case Internal::QueryType::SYN: { 
+            auto executor = CreateExecutor<Internal::QueryType::SYN>(&request, this);
+            executor->Run();
+        } break;
+        case Internal::QueryType::LEAVE_CHATROOM: { 
+            auto executor = CreateExecutor<Internal::QueryType::LEAVE_CHATROOM>(&request, this);
+            executor->Run();
+        } break;
+        case Internal::QueryType::JOIN_CHATROOM: {
+            auto executor = CreateExecutor<Internal::QueryType::JOIN_CHATROOM>(&request, this);
+            executor->Run();
+        } break;
+        case Internal::QueryType::CREATE_CHATROOM: {
+            auto executor = CreateExecutor<Internal::QueryType::CREATE_CHATROOM>(&request, this);
+            executor->Run();
+        } break;
+        case Internal::QueryType::LIST_CHATROOM: {
+            auto executor = CreateExecutor<Internal::QueryType::LIST_CHATROOM>(&request, this);
+            executor->Run();
+        } break;
+    }
 }
