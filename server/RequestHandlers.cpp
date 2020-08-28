@@ -96,7 +96,7 @@ namespace RequestHandlers {
 
     bool JoinChatroom::IsValidRequest() {
         /// TODO: update
-        m_reply.m_query = Internal::QueryType::JOIN_CHATROOM;
+        m_reply.m_query = QueryType::JOIN_CHATROOM;
 
         if(m_service->IsAcknowleged() == false) {
             m_reply.m_status = 424; // Failed Dependency
@@ -129,7 +129,7 @@ namespace RequestHandlers {
     };
 
     bool CreateChatroom::IsValidRequest() {
-        m_reply.m_query = Internal::QueryType::CREATE_CHATROOM;
+        m_reply.m_query = QueryType::CREATE_CHATROOM;
         
         if(m_service->IsAcknowleged() == false) {
             m_reply.m_status = 424; // Failed Dependency
@@ -198,10 +198,41 @@ namespace RequestHandlers {
     };
 
     bool ChatMessage::IsValidRequest() {
-        return true;
+        m_reply.m_query = QueryType::CHAT_MESSAGE;
+        
+        if(m_service->IsAcknowleged() == false) {
+            m_reply.m_status = 424; // Failed Dependency
+            m_reply.m_error = "Require acknowledgement";
+        }
+        else if(m_service->GetUser().m_chatroom != chat::Chatroom::NO_ROOM) {
+            m_reply.m_status = 200;
+        }
+        else {
+            m_reply.m_status = 405; //  Method Not Allowed;
+            m_reply.m_error = "Already in the chatroom.";
+        }
+
+        return m_reply.m_status == 200;
     };
 
     void ChatMessage::ExecuteRequest() {
+        rapidjson::Document doc;
+        auto& alloc = doc.GetAllocator();
+        doc.Parse(m_request->m_attachment.c_str());
 
+        const std::string message = doc["message"].GetString();
+        // build chat message for the other users
+        Response chatMessage {};
+        chatMessage.m_query = QueryType::CHAT_MESSAGE;
+        chatMessage.m_status = 200;
+        chatMessage.m_timestamp = Utils::GetTimestamp();
+        chatMessage.m_attachment = "{\"message\":\""+ message +"\"}";
+
+        std::string serialized {};
+        chatMessage.Write(serialized);
+        // broadcast to every user in the chatroom
+        m_service->BroadcastOnly(serialized, [session = m_service](const Session& s){
+            return session != &s;
+        });
     };
 }
