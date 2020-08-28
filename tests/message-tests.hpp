@@ -30,7 +30,7 @@ TEST(RequestTest, ParseJoinChatroomRequest) {
             "query": "join-chatroom",
             "timestamp": 344678435232,
             "timeout": 30,
-            "body": {
+            "attachment": {
                 "user": {
                     "name":"nickname"
                 },
@@ -56,7 +56,7 @@ TEST(RequestTest, ParseCreateChatroomRequest) {
             "query": "create-chatroom",
             "timestamp": 344678435232,
             "timeout": 30,
-            "body":{
+            "attachment":{
                 "user": {
                     "name":"nickname"
                 },
@@ -92,6 +92,27 @@ TEST(RequestTest, ParseListChatroomRequest) {
     EXPECT_EQ(request.m_query, Internal::QueryType::LIST_CHATROOM);
     EXPECT_EQ(request.m_timestamp, 344678435266LL);
     EXPECT_TRUE(request.m_attachment.empty());
+}
+
+TEST(RequestTest, ParseChatMessageRequest) {
+    const std::string requestStr = R"(
+       {
+            "query": "chat-message",
+            "timestamp": 344678435266,
+            "timeout": 30,
+            "attachment": {
+                "message": "Hello, it's a client side!"
+            }
+        }
+    )";  
+   
+    Internal::Request request{};
+    request.Read(requestStr);
+   
+    EXPECT_EQ(request.m_timeout, 30);
+    EXPECT_EQ(request.m_query, Internal::QueryType::CHAT_MESSAGE);
+    EXPECT_EQ(request.m_timestamp, 344678435266LL);
+    EXPECT_FALSE(request.m_attachment.empty());
 }
 
 // ========== Response ========= //

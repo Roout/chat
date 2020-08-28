@@ -17,6 +17,17 @@
 #include "../rapidjson/writer.h"
 #include "../rapidjson/stringbuffer.h"
 
+/// Helper functions:
+
+template<class Encoding, class Allocator>
+std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value) {
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    value.Accept(writer);
+    return { buffer.GetString(), buffer.GetLength() };
+}
+
+
 class BasicInteractionTest : public ::testing::Test {
 protected:
 
@@ -49,7 +60,6 @@ protected:
     void TearDown() override {
         m_server->Shutdown();
         m_context->stop();
-
         for(auto& t: m_threads) {
             if(t.joinable()) {
                 t.join();
@@ -62,6 +72,48 @@ protected:
         m_timer->wait();
     }
    
+    /**
+     * Wait for handshake and confirm that it was successfull
+     */
+    void ConfirmHandshake() {
+        // blocks
+        this->WaitFor(m_waitAckTimeout);
+        // test
+        ASSERT_TRUE(m_client->IsAcknowleged()) << "Client hasn't been acknowleged";
+        EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+    }
+
+    /**
+     * Create a join request and send it to server
+     * 
+     * @param id
+     *  An ID of the chatroom will be joined
+     * @param username 
+     *  A name which will identify user at the chatroom  
+     * @param client
+     *  A client wished to join a chatroom
+     */
+    void JoinChatroom(std::size_t id, const std::string& username, Client& client) {
+        Internal::Request request{};
+        request.m_query = Internal::QueryType::JOIN_CHATROOM;
+        request.m_timeout = 30;
+        request.m_timestamp = Utils::GetTimestamp();
+        // set up attachment
+        rapidjson::Document doc(rapidjson::kObjectType);
+        auto& alloc = doc.GetAllocator();
+        doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
+        doc["user"].AddMember("name", rapidjson::Value(username.c_str(), alloc), alloc);  
+        doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
+        doc["chatroom"].AddMember("id", id, alloc);
+        request.m_attachment = ::Serialize(doc); 
+        // send request
+        std::string serialized;
+        request.Write(serialized);
+        client.Write(std::move(serialized));   
+        // wait 25ms for answer
+        this->WaitFor(request.m_timeout);
+    }
+
 protected:
     std::unique_ptr<Server> m_server {};
     std::unique_ptr<Client> m_client {};
@@ -79,21 +131,12 @@ protected:
  * Client recieve ACK 
  */
 TEST_F(BasicInteractionTest, OnlyFixureSetup) {
-    // prepare (done in ::SetUp method)
-    // execute (done in ::SetUp method)
-    this->WaitFor(m_waitAckTimeout);
-    // test
-    ASSERT_TRUE(m_client->IsAcknowleged())
-        << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+    this->ConfirmHandshake();
 }
 
 TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 0. Confirm Handshake
-    this->WaitFor(m_waitAckTimeout);
-    ASSERT_TRUE(m_client->IsAcknowleged())
-        << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+    this->ConfirmHandshake();
 
     /// 1. Server creates chatrooms
     struct MockChatroom {
@@ -146,14 +189,9 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     }
 }
 
-// Internal::QueryType::JOIN_CHATROOM for already existing chatrooms
 TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(m_waitAckTimeout);
-    ASSERT_TRUE(m_client->IsAcknowleged())
-        << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
-
+    this->ConfirmHandshake();
     
     /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
@@ -162,31 +200,8 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
     const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
     
-    // #2 Join Chatroom
-    Internal::Request request{};
-    request.m_query = Internal::QueryType::JOIN_CHATROOM;
-    request.m_timeout = 30;
-    request.m_timestamp = Utils::GetTimestamp();
-    // Set up body
-    rapidjson::Document doc(rapidjson::kObjectType);
-    auto& alloc = doc.GetAllocator();
-    doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
-    doc["user"].AddMember("name", rapidjson::Value("random username", alloc), alloc);
-    
-    doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
-    doc["chatroom"].AddMember("id", desiredId, alloc);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
-    doc.Accept(writer);
-    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
-
-    // send request
-    std::string serialized;
-    request.Write(serialized);
-    m_client->Write(std::move(serialized));   
-    // wait 25ms for answer
-    this->WaitFor(request.m_timeout);
+    // #2 Join
+    this->JoinChatroom(desiredId, "random user name", *m_client);
 
     // #3 Confirm that we've joined
     const auto& joinReply = m_client->GetGUI().GetResponse();
@@ -196,13 +211,9 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 }
 
-// Internal::QueryType::CREATE_CHATROOM create and join new chatroom.
 TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(m_waitAckTimeout);
-    ASSERT_TRUE(m_client->IsAcknowleged())
-        << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+    this->ConfirmHandshake();
 
     /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
@@ -210,12 +221,12 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     m_server->CreateChatroom("Test chatroom #3"); 
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
     
-    // #2 Join Chatroom
+    // #2 Create & Join Chatroom
     Internal::Request request{};
     request.m_query = Internal::QueryType::CREATE_CHATROOM;
     request.m_timeout = 30;
     request.m_timestamp = Utils::GetTimestamp();
-    // Set up body
+    // Set up attachment
     rapidjson::Document doc(rapidjson::kObjectType);
     auto& alloc = doc.GetAllocator();
     doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
@@ -224,10 +235,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
     doc["chatroom"].AddMember("name", rapidjson::Value(desiredChatroomName.c_str(), alloc), alloc);
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
-    doc.Accept(writer);
-    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
+    request.m_attachment = ::Serialize(doc); 
 
     // send request
     std::string serialized;
@@ -259,6 +267,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
         EXPECT_TRUE(std::regex_match(room, match, rx));
 
         if(std::stoi(match[1].str()) == id) {
+            EXPECT_FALSE(foundMatchRoom) << "Room with ID = " << id << " already exist.";
             foundMatchRoom = true;
             EXPECT_EQ(desiredChatroomName, match[2].str());
             EXPECT_EQ(expectedUsersCount, std::stoi(match[3].str()));
@@ -268,14 +277,9 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
 
 }
 
-
-// Internal::QueryType::LEAVE_CHATROOM 
 TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     /// #0. Cinfirm Handshake
-    this->WaitFor(m_waitAckTimeout);
-    ASSERT_TRUE(m_client->IsAcknowleged())
-        << "Client hasn't been acknowleged";
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+    this->ConfirmHandshake();
 
     /// #1 Create chatrooms
     m_server->CreateChatroom("Test chatroom #1"); 
@@ -285,30 +289,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
     
     // #2 Join Chatroom
-    Internal::Request request{};
-    request.m_query = Internal::QueryType::JOIN_CHATROOM;
-    request.m_timeout = 30;
-    request.m_timestamp = Utils::GetTimestamp();
-    // Set up body
-    rapidjson::Document doc(rapidjson::kObjectType);
-    auto& alloc = doc.GetAllocator();
-    doc.AddMember("user", rapidjson::Value(rapidjson::kObjectType), alloc);
-    doc["user"].AddMember("name", rapidjson::Value("random username", alloc), alloc);
-    
-    doc.AddMember("chatroom", rapidjson::Value(rapidjson::kObjectType) , alloc);
-    doc["chatroom"].AddMember("id", desiredId, alloc);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer (buffer);
-    doc.Accept(writer);
-    request.m_attachment = std::string { buffer.GetString(), buffer.GetLength() }; 
-
-    // send request
-    std::string serialized;
-    request.Write(serialized);
-    m_client->Write(std::move(serialized));   
-    // wait 25ms for answer
-    this->WaitFor(request.m_timeout);
+    this->JoinChatroom(desiredId, "random user name", *m_client);
 
     // #3 Confirm that we've joined
     const auto& joinReply = m_client->GetGUI().GetResponse();
@@ -326,21 +307,78 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     EXPECT_EQ(expectedUsersCount, std::get<USERS>(*roomTupleOpt));
     
     /// #5 Leave chatroom
-    Internal::Request leaveRequest{};
-    leaveRequest.m_query = Internal::QueryType::LEAVE_CHATROOM;
-    leaveRequest.m_timeout = 30;
-    leaveRequest.m_timestamp = Utils::GetTimestamp();
+    Internal::Request chat{};
+    chat.m_query = Internal::QueryType::LEAVE_CHATROOM;
+    chat.m_timeout = 30;
+    chat.m_timestamp = Utils::GetTimestamp();
     // send request
-    serialized.clear();
-    leaveRequest.Write(serialized);
+    std::string serialized {};
+    chat.Write(serialized);
     m_client->Write(std::move(serialized));   
 
     // wait for answer
-    this->WaitFor(leaveRequest.m_timeout);
+    this->WaitFor(chat.m_timeout);
 
     /// #6 Confirmn that we've left
     const auto afterLeaveRoomOpt = m_server->GetChatroomData(desiredId);
     EXPECT_EQ(afterLeaveRoomOpt, std::nullopt);
+}
+
+TEST_F(BasicInteractionTest, ChatMessageRequest) {
+    // #0 Confirm handshake
+    this->ConfirmHandshake();
+
+    // #1 Create chatrooms
+    m_server->CreateChatroom("Test chatroom #1"); 
+    m_server->CreateChatroom("Test chatroom #2"); 
+    m_server->CreateChatroom("Test chatroom #3"); 
+    const std::string desiredChatroomName {"This TestF's Target chatroom"};
+    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
+    
+    // #2 Join Chatroom
+    this->JoinChatroom(desiredId, "user #1", *m_client);
+
+    // #3 Confirm that we've joined
+    const auto& joinReply = m_client->GetGUI().GetResponse();
+
+    EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
+    EXPECT_EQ(joinReply.m_status, 200);
+    EXPECT_TRUE(joinReply.m_attachment.empty());
+
+    // #4 Add another client to the chatroom
+    auto client = std::make_unique<Client>(m_context);
+    client->Connect("127.0.0.1", 15001);
+    this->JoinChatroom(desiredId, "user #2", *client);
+
+    // #5 Build chat request
+    const std::string msg { "Hello!I'm Bob!" };
+    Internal::Request chat{};
+    chat.m_query = Internal::QueryType::CHAT_MESSAGE;
+    chat.m_timeout = 30;
+    chat.m_timestamp = Utils::GetTimestamp();
+    chat.m_attachment = "{\"message\":\"" + msg + "\"}";
+    // send request
+    std::string serialized{};
+    chat.Write(serialized);
+    m_client->Write(std::move(serialized));   
+    // wait for answer
+    this->WaitFor(chat.m_timeout);
+
+    // #6 Confirm response to the sender
+    const auto& chatReply = m_client->GetGUI().GetResponse();
+    EXPECT_EQ(chatReply.m_query, Internal::QueryType::CHAT_MESSAGE);
+    EXPECT_EQ(chatReply.m_status, 200);
+    EXPECT_TRUE(chatReply.m_attachment.empty());
+
+    // #7 Confirm response to broadcast
+    const auto& incoming = client->GetGUI().GetResponse();
+    EXPECT_EQ(incoming.m_query, Internal::QueryType::CHAT_MESSAGE);
+    EXPECT_EQ(incoming.m_status, 200);
+    EXPECT_FALSE(incoming.m_attachment.empty());
+    
+    rapidjson::Document attachment;
+    attachment.Parse(incoming.m_attachment.c_str());
+    EXPECT_EQ(msg, std::string(attachment["message"].GetString()));
 }
 
 /** TODO:
