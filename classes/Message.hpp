@@ -30,7 +30,7 @@ namespace Internal {
          * @param[out] json
          *  String which will hold serialized value. 
          */
-        virtual void Write(std::string& json) = 0;
+        virtual void Write(std::string& json) const = 0;
 
     };
 
@@ -73,7 +73,7 @@ namespace Internal {
          * @param[out] json
          *  String which will hold serialized value. 
          */
-        void Write(std::string& json) override;
+        void Write(std::string& json) const override;
 
     };
 
@@ -124,7 +124,7 @@ namespace Internal {
          * @param[out] json
          *  String which will hold serialized value. 
          */
-        void Write(std::string& json) override;
+        void Write(std::string& json) const override;
 
     };
 

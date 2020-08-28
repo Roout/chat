@@ -30,7 +30,7 @@ namespace {
             { "leave-chatroom",     Internal::QueryType::LEAVE_CHATROOM },
             { "create-chatroom",    Internal::QueryType::CREATE_CHATROOM },
             { "list-chatroom",      Internal::QueryType::LIST_CHATROOM },
-            { "chat_message",       Internal::QueryType::CHAT_MESSAGE },
+            { "chat-message",       Internal::QueryType::CHAT_MESSAGE },
             { "syn",                Internal::QueryType::SYN },
             { "ack",                Internal::QueryType::ACK }
         };
@@ -48,15 +48,15 @@ namespace Internal {
         m_timestamp = doc["timestamp"].GetInt64();
         m_timeout = doc["timeout"].GetUint64();
 
-        if( doc.HasMember("body") ) {
+        if( doc.HasMember("attachment") ) {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc["body"].Accept(writer);
+            doc["attachment"].Accept(writer);
             m_attachment = std::string(buffer.GetString(), buffer.GetLength());
         } 
     }
 
-    void Request::Write(std::string& json) {
+    void Request::Write(std::string& json) const {
         rapidjson::Document doc;
         auto& alloc = doc.GetAllocator();
         doc.SetObject();
@@ -81,7 +81,7 @@ namespace Internal {
         json = std::string(buffer.GetString(), buffer.GetLength());
         if( !m_attachment.empty() ) {
             json.pop_back(); // remove '}'
-            json += ",\"body\":";
+            json += ",\"attachment\":";
             json += m_attachment;
             json += "}";
         }
@@ -102,15 +102,15 @@ namespace Internal {
             m_error.clear();
         }
         
-        if( doc.HasMember("body") ) {
+        if( doc.HasMember("attachment") ) {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-            doc["body"].Accept(writer);
+            doc["attachment"].Accept(writer);
             m_attachment = std::string(buffer.GetString(), buffer.GetLength());
         } 
     }
 
-    void Response::Write(std::string& json) {
+    void Response::Write(std::string& json) const {
         rapidjson::Document doc;
         auto& alloc = doc.GetAllocator();
         doc.SetObject();
@@ -140,7 +140,7 @@ namespace Internal {
         json = std::string(buffer.GetString(), buffer.GetLength());
         if( !m_attachment.empty() ) {
             json.pop_back(); // remove '}'
-            json += ",\"body\":";
+            json += ",\"attachment\":";
             json += m_attachment;
             json += "}";
         }
