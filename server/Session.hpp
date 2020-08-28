@@ -77,6 +77,11 @@ public:
 
     std::vector<std::string> GetChatroomList() const noexcept;
 
+    void BroadcastOnly(
+        const std::string& message, 
+        std::function<bool(const Session&)>&& condition
+    );
+    
     /**
      * Shutdown Session and close the socket  
      */

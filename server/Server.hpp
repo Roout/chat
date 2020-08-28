@@ -124,9 +124,26 @@ private:
      *  The ID of the joined chatroom. If it belongs to the HALL room,
      * returns chat::Chatroom::NO_ROOM constant
      * @note
-     *  Thread-safety : safe
+     *  Thread-safety: safe
      */
-    std::size_t GetChatroom(const Session*const session) const noexcept;
+    std::size_t GetChatroom(const Session* const session) const noexcept;
+
+    /**
+     * Conditional broadcast message to users in the chatroom which @source belongs.
+     * 
+     * @param source
+     *  Session which initiate a broadcast in chatroom it belongs
+     * @param message
+     *  Message which will be broadcasted
+     * @param condition
+     *  Conditional function which on execution return indication
+     * whether a message will be sent to the given user on not.
+     */
+    void BroadcastOnly(
+        const Session* source, 
+        const std::string& message, 
+        std::function<bool(const Session&)>&& condition
+    );
 
     /**
      * Check whether a chatroom with the given ID exist.

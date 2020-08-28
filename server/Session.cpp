@@ -162,7 +162,6 @@ void Session::WriteSomeHandler(
         m_server->Write(LogType::info, 
             "Session sent: ", transferredBytes, " bytes.\n"
         );
-
         if(m_outbox.GetQueueSize()) {
             // we need to Write other data
             m_server->Write(LogType::info, 
@@ -194,6 +193,13 @@ bool Session::AssignChatroom(std::size_t id) {
     return isAssigned;
 }
 
+void Session::BroadcastOnly(
+    const std::string& message, 
+    std::function<bool(const Session&)>&& condition
+) {
+    m_server->BroadcastOnly(this, message, std::move(condition));
+}
+
 bool Session::LeaveChatroom() {
     // leave current chatroom if exist
     if(m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
@@ -213,36 +219,25 @@ std::vector<std::string> Session::GetChatroomList() const noexcept {
     return m_server->GetChatroomList();
 }
 
-template<class Encoding, class Allocator>
-std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value) {
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    value.Accept(writer);
-    return { buffer.GetString(), buffer.GetLength() };
-}
-
-
 void Session::HandleRequest(const Internal::Request& request) {
     switch(request.m_query) {
         case Internal::QueryType::SYN: { 
-            auto executor = CreateExecutor<Internal::QueryType::SYN>(&request, this);
-            executor->Run();
+            CreateExecutor<Internal::QueryType::SYN>(&request, this)->Run();
         } break;
         case Internal::QueryType::LEAVE_CHATROOM: { 
-            auto executor = CreateExecutor<Internal::QueryType::LEAVE_CHATROOM>(&request, this);
-            executor->Run();
+            CreateExecutor<Internal::QueryType::LEAVE_CHATROOM>(&request, this)->Run();
         } break;
         case Internal::QueryType::JOIN_CHATROOM: {
-            auto executor = CreateExecutor<Internal::QueryType::JOIN_CHATROOM>(&request, this);
-            executor->Run();
+            CreateExecutor<Internal::QueryType::JOIN_CHATROOM>(&request, this)->Run();
         } break;
         case Internal::QueryType::CREATE_CHATROOM: {
-            auto executor = CreateExecutor<Internal::QueryType::CREATE_CHATROOM>(&request, this);
-            executor->Run();
+            CreateExecutor<Internal::QueryType::CREATE_CHATROOM>(&request, this)->Run();
         } break;
         case Internal::QueryType::LIST_CHATROOM: {
-            auto executor = CreateExecutor<Internal::QueryType::LIST_CHATROOM>(&request, this);
-            executor->Run();
+            CreateExecutor<Internal::QueryType::LIST_CHATROOM>(&request, this)->Run();
+        } break;
+        case Internal::QueryType::CHAT_MESSAGE: {
+            CreateExecutor<Internal::QueryType::CHAT_MESSAGE>(&request, this)->Run();
         } break;
     }
     /// TODO: handle unexpected request

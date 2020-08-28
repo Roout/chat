@@ -70,6 +70,17 @@ bool Server::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Sessio
     return false;
 }
 
+void Server::BroadcastOnly(
+    const Session* source, 
+    const std::string& message, 
+    std::function<bool(const Session&)>&& condition
+) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    /// TODO: handle possible errors
+    const auto id = source->GetUser().m_chatroom;
+    m_chatrooms.at(id).Broadcast(message, condition);
+}
+
 void Server::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
     // Check whether it's a hall chatroom
     if( chatroomId == m_hall.GetId()) {
