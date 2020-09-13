@@ -11,8 +11,8 @@ int main() {
 		std::make_shared<boost::asio::io_context>() 
 	};
 	
-	Client client { io };
-	client.Connect("127.0.0.1", 15001);
+	auto client = std::make_shared<Client>(io);
+	client->Connect("127.0.0.1", 15001);
 	vector<thread> ts;
 	for(int i = 0; i < 2; i++) {
 		ts.emplace_back([io]() {
@@ -33,7 +33,7 @@ int main() {
 	while(true) {
 		string str;
 		getline(cin, str);
-		client.Write(std::move(str));
+		client->Write(std::move(str));
 	}
 
 	for(auto& t: ts) {
