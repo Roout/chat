@@ -34,7 +34,7 @@ void Client::Connect(const std::string& path, std::uint16_t port) {
         const auto endpoint { endpoints.cbegin()->endpoint() };
         m_socket.async_connect(
             endpoint, 
-            std::bind(&Client::OnConnect, this, std::placeholders::_1)  // implicit strand.
+            std::bind(&Client::OnConnect, this->shared_from_this(), std::placeholders::_1)
         );
     }
 }
@@ -42,10 +42,10 @@ void Client::Connect(const std::string& path, std::uint16_t port) {
 void Client::Write(std::string && text ) {
     // using strand we prevent concurrent access to variables and 
     // concurrent writing to socket. 
-    asio::post(m_strand, [text = std::move(text), this]() mutable {
-        m_outbox.Enque(std::move(text));
-        if(!m_isWriting) {
-            this->Write();
+    asio::post(m_strand, [text = std::move(text), self = this->shared_from_this()]() mutable {
+        self->m_outbox.Enque(std::move(text));
+        if(!self->m_isWriting) {
+            self->Write();
         } 
     });
 }
@@ -91,7 +91,11 @@ void Client::Read() {
         Internal::MESSAGE_DELIMITER,
         asio::bind_executor(
             m_strand,
-            std::bind(&Client::OnRead, this, std::placeholders::_1, std::placeholders::_2)
+            std::bind(&Client::OnRead, 
+                this->shared_from_this(), 
+                std::placeholders::_1, 
+                std::placeholders::_2
+            )
         )
     );
 }
@@ -146,8 +150,8 @@ void Client::OnWrite(
 
         if(m_outbox.GetQueueSize()) {
             // we need to send other data
-            asio::post(m_strand, [this](){
-                this->Write();
+            asio::post(m_strand, [self = this->shared_from_this()](){
+                self->Write();
             });
         } 
         else {
@@ -172,7 +176,7 @@ void Client::Write() {
         asio::bind_executor(
             m_strand,
             std::bind(&Client::OnWrite, 
-                this, 
+                this->shared_from_this(), 
                 std::placeholders::_1, 
                 std::placeholders::_2
             )

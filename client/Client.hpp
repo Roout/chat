@@ -11,7 +11,7 @@
 
 namespace asio = boost::asio;
 
-class Client final {
+class Client final : public std::enable_shared_from_this<Client> {
 public:
     
     /**

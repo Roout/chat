@@ -39,7 +39,7 @@ protected:
         m_server = std::make_unique<Server> (m_context, 15001);
         m_server->Start();
         // Create client and connect to server
-        m_client = std::make_unique<Client> (m_context);
+        m_client = std::make_shared<Client> (m_context);
         m_client->Connect("127.0.0.1", 15001);
 
         for(int i = 0; i < 2; i++) {
@@ -116,7 +116,7 @@ protected:
 
 protected:
     std::unique_ptr<Server> m_server {};
-    std::unique_ptr<Client> m_client {};
+    std::shared_ptr<Client> m_client {};
     std::shared_ptr<boost::asio::io_context> m_context {};
     std::vector<std::thread> m_threads {};
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
@@ -346,7 +346,7 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
     // #4 Add another client to the chatroom
-    auto client = std::make_unique<Client>(m_context);
+    auto client = std::make_shared<Client>(m_context);
     client->Connect("127.0.0.1", 15001);
     this->JoinChatroom(desiredId, "user #2", *client);
 
