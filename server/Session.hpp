@@ -4,16 +4,19 @@
 #include <string>
 #include <cstddef>
 #include <functional>
+
 #include <boost/asio.hpp>
+
 #include "DoubleBuffer.hpp"
 #include "Message.hpp"
 #include "User.hpp"
+#include "Log.hpp"
 
 namespace asio = boost::asio;
 
-class Server;
 namespace chat {
     class Chatroom;
+    class RoomService;
 }
 
 class Session final : public std::enable_shared_from_this<Session> {
@@ -21,7 +24,8 @@ public:
 
     Session( 
         asio::ip::tcp::socket && socket, 
-        Server * const server 
+        chat::RoomService * const service,
+        asio::io_context * const context
     );
 
     ~Session() {
@@ -90,6 +94,12 @@ public:
 private:
     
     /**
+     * Logging the custom message
+     */
+    template<class ...Args>
+    void AddLog(const LogType ty, Args&& ...args);
+
+    /**
      * Read data from the remote connection.
      * At first it's invoked at server's `on accept` completion handler.
      * Otherwise it can be invoked within `on read` completion handler. 
@@ -147,12 +157,14 @@ private:
         DISCONNECTED
     };
 
+    std::shared_ptr<Log> m_logger{ nullptr };
+
     /**
      * It's a socket connected to the remote peer. 
      */
     asio::ip::tcp::socket m_socket;
 
-    Server * const m_server { nullptr };
+    chat::RoomService * const m_service { nullptr };
 
     /**
      * It's a user assosiated with remote connection 
@@ -193,6 +205,12 @@ private:
      */
     std::size_t m_synTime { 128 };
 };
+
+
+template<class ...Args>
+void Session::AddLog(const LogType ty, Args&& ...args) {
+    m_logger->Write(ty, std::forward<Args>(args)...);
+}
 
 
 #endif // SESSION_HPP

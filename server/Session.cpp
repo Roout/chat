@@ -1,5 +1,5 @@
 #include "Session.hpp"
-#include "Server.hpp"
+#include "RoomService.hpp"
 #include "Message.hpp"
 #include "Utility.hpp"
 #include "Chatroom.hpp"
@@ -11,18 +11,16 @@
 #include <iostream>
 #include <sstream>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
-
 Session::Session( 
     asio::ip::tcp::socket && socket, 
-    Server * const server 
+    chat::RoomService * const service,
+    asio::io_context * const context
 ) :
+    m_logger { std::make_shared<Log>("session_log.txt") },
     m_socket { std::move(socket) },
-    m_server { server },
-    m_strand { *server->m_context },
-    m_timer { *server->m_context }
+    m_service { service },
+    m_strand { *context },
+    m_timer { *context }
 {
     m_user.m_chatroom = chat::Chatroom::NO_ROOM;
 }
@@ -77,7 +75,7 @@ void Session::ExpiredDeadlineHandler(
     bool isCanceled { error == boost::asio::error::operation_aborted };
     bool endWithoutError = !error || isCanceled;
     if( endWithoutError && this->IsWaitingSyn() ) {
-        m_server->Write(LogType::info, "Connection has been closed due to timeout.");
+        this->AddLog(LogType::info, "Connection has been closed due to timeout.");
         this->Close();
     } 
     else {
@@ -107,14 +105,14 @@ void Session::Close() {
     boost::system::error_code ec;
     m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     if(ec) { 
-        m_server->Write(LogType::error, 
+        this->AddLog(LogType::error, 
             "Session's socket called shutdown with error: ", ec.message(), '\n'
         );
         ec.clear();
     }
     m_socket.close(ec);
     if(ec) {
-        m_server->Write(LogType::error, 
+        this->AddLog(LogType::error, 
             "Session's socket is being closed with error: ", ec.message(), '\n'
         );
     } 
@@ -126,7 +124,7 @@ void Session::ReadSomeHandler(
     std::size_t transferredBytes
 ) {
     if(!error) {
-        m_server->Write(LogType::info, 
+        this->AddLog(LogType::info, 
             "Session just recive: ", transferredBytes, " bytes.\n"
         );
         const auto data { m_inbox.data() };
@@ -137,7 +135,7 @@ void Session::ReadSomeHandler(
         m_inbox.consume(transferredBytes);
         
         boost::system::error_code ec; 
-        m_server->Write(LogType::info, 
+        this->AddLog(LogType::info, 
             m_socket.remote_endpoint(ec), ": ", received, '\n'
         );
 
@@ -148,7 +146,7 @@ void Session::ReadSomeHandler(
         this->Read();
     } 
     else {
-        m_server->Write(LogType::error, 
+        this->AddLog(LogType::error, 
             "Session trying to read invoked error: ", error.message(), '\n'
         );
     }
@@ -159,12 +157,12 @@ void Session::WriteSomeHandler(
     std::size_t transferredBytes
 ) {
     if(!error) {
-        m_server->Write(LogType::info, 
+        this->AddLog(LogType::info, 
             "Session sent: ", transferredBytes, " bytes.\n"
         );
         if(m_outbox.GetQueueSize()) {
             // we need to Write other data
-            m_server->Write(LogType::info, 
+            this->AddLog(LogType::info, 
                 "Session need to Write ", m_outbox.GetQueueSize(), " messages.\n"
             );
             asio::post(m_strand, [self = shared_from_this()](){
@@ -178,7 +176,7 @@ void Session::WriteSomeHandler(
     else /* if(error == boost::asio::error::eof) */ {
         // Connection was closed by the remote peer 
         // or any other error happened 
-        m_server->Write(LogType::error, 
+        this->AddLog(LogType::error, 
             "Session has error trying to write: ", error.message(), "\n"
         );
         this->Close();
@@ -186,24 +184,24 @@ void Session::WriteSomeHandler(
 }
 
 bool Session::AssignChatroom(std::size_t id) {
-    bool isAssigned = m_server->AssignChatroom(id, shared_from_this());
-    if(isAssigned) {
+    if(m_service->AssignChatroom(id, shared_from_this())) {
         m_user.m_chatroom = id;
+        return true;
     }
-    return isAssigned;
+    return false;
 }
 
 void Session::BroadcastOnly(
     const std::string& message, 
     std::function<bool(const Session&)>&& condition
 ) {
-    m_server->BroadcastOnly(this, message, std::move(condition));
+    m_service->BroadcastOnly(this, message, std::move(condition));
 }
 
 bool Session::LeaveChatroom() {
     // leave current chatroom if exist
     if(m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
-        m_server->LeaveChatroom(m_user.m_chatroom, shared_from_this());
+        m_service->LeaveChatroom(m_user.m_chatroom, shared_from_this());
         m_user.m_chatroom = chat::Chatroom::NO_ROOM;
         return true;
     }
@@ -211,12 +209,12 @@ bool Session::LeaveChatroom() {
 }
 
 std::size_t Session::CreateChatroom(const std::string& chatroomName) {
-    const auto roomId = m_server->CreateChatroom(chatroomName); 
+    const auto roomId = m_service->CreateChatroom(chatroomName); 
     return roomId;
 }
 
 std::vector<std::string> Session::GetChatroomList() const noexcept {
-    return m_server->GetChatroomList();
+    return m_service->GetChatroomList();
 }
 
 void Session::HandleRequest(const Internal::Request& request) {
