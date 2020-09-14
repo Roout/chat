@@ -16,13 +16,15 @@ Session::Session(
     chat::RoomService * const service,
     asio::io_context * const context
 ) :
-    m_logger { std::make_shared<Log>("session_log.txt") },
     m_socket { std::move(socket) },
     m_service { service },
     m_strand { *context },
     m_timer { *context }
 {
     m_user.m_chatroom = chat::Chatroom::NO_ROOM;
+    std::stringstream ss;
+    ss << "session_" << m_user.m_id << "_log.txt";
+    m_logger = std::make_shared<Log>(ss.str().c_str());
 }
 
 void Session::Write(std::string text) {
