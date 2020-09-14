@@ -59,14 +59,25 @@ namespace chat {
 
     Chatroom & Chatroom::operator=(Chatroom&&rhs) = default;
 
-    Chatroom::~Chatroom() = default;
+    Chatroom::~Chatroom() {
+        bool isClosed { false };
+        {
+            std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
+            isClosed = m_impl->m_users > 0U;
+        }
+        if(!isClosed) this->Close();
+    };
 
     void Chatroom::Close() {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
 
-        for(auto& s: m_impl->m_sessions) {
-            if(s) s->Close();
+        for(auto& session: m_impl->m_sessions) {
+            if(session) { 
+                session->Close();
+                session.reset();
+            }
         };
+        m_impl->m_users = 0U;
     }
 
     std::size_t Chatroom::GetId() const noexcept {
