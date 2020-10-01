@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 #include <boost/asio.hpp>
-#include "DoubleBuffer.hpp"
-#include "Message.hpp"
-#include "Log.hpp"
+#include "classes/DoubleBuffer.hpp"
+#include "classes/Message.hpp"
+#include "classes/Log.hpp"
 #include "GUI.hpp"
 
 namespace asio = boost::asio;

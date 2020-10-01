@@ -3,9 +3,9 @@
 
 #include <mutex>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 namespace chat {
     
@@ -102,7 +102,7 @@ namespace chat {
         }
 
         for(auto& s: m_impl->m_sessions) {
-            if(s == false) {
+            if(s == nullptr) {
                 s = session;
                 m_impl->m_users++;
                 break;

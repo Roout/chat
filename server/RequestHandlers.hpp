@@ -1,8 +1,8 @@
 #ifndef REQUEST_HANDLER_HPP
 #define REQUEST_HANDLER_HPP
 
-#include "QueryType.hpp"
-#include "Message.hpp"
+#include "classes/QueryType.hpp"
+#include "classes/Message.hpp"
 
 #include <memory>
 #include <type_traits>

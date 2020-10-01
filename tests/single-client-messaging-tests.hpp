@@ -6,18 +6,19 @@
 #include "Server.hpp"
 #include "Session.hpp"
 #include "Client.hpp"
-#include "Utility.hpp"
-#include "QueryType.hpp"
 #include "RoomService.hpp"
+
+#include "classes/Utility.hpp"
+#include "classes/QueryType.hpp"
 
 #include <memory>
 #include <thread>
 #include <regex>
 #include <cstddef>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 /// Helper functions:
 

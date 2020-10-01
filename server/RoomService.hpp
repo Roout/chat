@@ -10,7 +10,7 @@
 #include <vector>
 #include <cstddef>
 
-#include "Log.hpp"
+#include "classes/Log.hpp"
 #include "Chatroom.hpp"
 
 class Session;

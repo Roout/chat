@@ -1,15 +1,15 @@
 #include "Client.hpp"
-#include "Message.hpp"
-#include "QueryType.hpp"
-#include "Utility.hpp"
+#include "classes/Message.hpp"
+#include "classes/QueryType.hpp"
+#include "classes/Utility.hpp"
 
 #include <iostream>
 #include <string_view>
 #include <functional> // std::bind
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 Client::Client(std::shared_ptr<asio::io_context> io):
     m_io { io },

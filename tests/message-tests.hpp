@@ -2,9 +2,9 @@
 #define REQUEST_TESTS_HPP 
 
 #include "gtest/gtest.h"
-#include "Message.hpp"
-#include "Utility.hpp"
 #include <string>
+#include "classes/Message.hpp"
+#include "classes/Utility.hpp"
 
 TEST(RequestTest, ParseLeaveChatroomRequest) {
     const std::string requestStr = R"(
