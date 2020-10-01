@@ -1,3 +1,4 @@
+include(ExternalProject)
 # Download RapidJSON
 ExternalProject_Add(
     rapidjson
