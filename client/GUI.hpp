@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "classes/Message.hpp"
+#include "Message.hpp"
 
 class GUI {
 public:

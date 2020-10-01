@@ -1,7 +1,7 @@
 #include "Session.hpp"
 #include "RoomService.hpp"
-#include "classes/Message.hpp"
-#include "classes/Utility.hpp"
+#include "Message.hpp"
+#include "Utility.hpp"
 #include "Chatroom.hpp"
 #include "RequestHandlers.hpp"
 

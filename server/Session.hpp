@@ -7,10 +7,10 @@
 
 #include <boost/asio.hpp>
 
-#include "classes/DoubleBuffer.hpp"
-#include "classes/Message.hpp"
-#include "classes/User.hpp"
-#include "classes/Log.hpp"
+#include "DoubleBuffer.hpp"
+#include "Message.hpp"
+#include "User.hpp"
+#include "Log.hpp"
 
 namespace asio = boost::asio;
 

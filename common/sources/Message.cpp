@@ -3,9 +3,9 @@
 #include <string>
 #include <map>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 namespace {
 
@@ -52,7 +52,7 @@ namespace Internal {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc["attachment"].Accept(writer);
-            m_attachment = std::string(buffer.GetString(), buffer.GetLength());
+            m_attachment = std::string(buffer.GetString(), buffer.GetSize());
         } 
     }
 
@@ -78,7 +78,7 @@ namespace Internal {
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         doc.Accept(writer);
 
-        json = std::string(buffer.GetString(), buffer.GetLength());
+        json = std::string(buffer.GetString(), buffer.GetSize());
         if( !m_attachment.empty() ) {
             json.pop_back(); // remove '}'
             json += ",\"attachment\":";
@@ -106,7 +106,7 @@ namespace Internal {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc["attachment"].Accept(writer);
-            m_attachment = std::string(buffer.GetString(), buffer.GetLength());
+            m_attachment = std::string(buffer.GetString(), buffer.GetSize());
         } 
     }
 
@@ -137,7 +137,7 @@ namespace Internal {
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         doc.Accept(writer);
 
-        json = std::string(buffer.GetString(), buffer.GetLength());
+        json = std::string(buffer.GetString(), buffer.GetSize());
         if( !m_attachment.empty() ) {
             json.pop_back(); // remove '}'
             json += ",\"attachment\":";

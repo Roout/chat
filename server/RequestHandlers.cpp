@@ -2,7 +2,7 @@
 #include "Session.hpp"
 #include "Chatroom.hpp"
 
-#include "classes/Utility.hpp"
+#include "Utility.hpp"
 
 #include <string>
 
@@ -15,7 +15,7 @@ std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value)
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     value.Accept(writer);
-    return { buffer.GetString(), buffer.GetLength() };
+    return { buffer.GetString(), buffer.GetSize() };
 }
 
 /// Implementation  

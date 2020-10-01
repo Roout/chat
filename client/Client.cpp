@@ -1,7 +1,7 @@
 #include "Client.hpp"
-#include "classes/Message.hpp"
-#include "classes/QueryType.hpp"
-#include "classes/Utility.hpp"
+#include "Message.hpp"
+#include "QueryType.hpp"
+#include "Utility.hpp"
 
 #include <iostream>
 #include <string_view>
@@ -196,7 +196,7 @@ void Client::Synchronize() {
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     d.Accept(writer);
-    request.m_attachment = std::string(buffer.GetString(), buffer.GetLength());
+    request.m_attachment = std::string(buffer.GetString(), buffer.GetSize());
 
     std::string serialized{};
     request.Write(serialized);
