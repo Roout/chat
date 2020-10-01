@@ -4,11 +4,9 @@ set(This tests)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(RAPIDJSON_DIR "../")
 set(CLIENT_DIR ${client_INCLUDE_DIRS})
 # NOTE: Boost's includes are transitively added through server_INCLUDE_DIRS.
 set(SERVER_DIR ${server_INCLUDE_DIRS})
-set(COMMON_INTERFACE_DIR "../")
 
 message(STATUS "SERVER_DIR: ${SERVER_DIR}")
 message(STATUS "CLIENT_DIR: ${CLIENT_DIR}")
@@ -30,8 +28,7 @@ enable_testing()
 add_executable(${This} ${sources} ${headers})
 
 target_include_directories(${This} 
-  PUBLIC ${RAPIDJSON_DIR}
-  PUBLIC ${COMMON_INTERFACE_DIR}
+  PUBLIC ${RAPIDJSON_INCLUDE_DIR}
   PUBLIC ${SERVER_DIR}
   PUBLIC ${CLIENT_DIR}
 )

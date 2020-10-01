@@ -3,8 +3,8 @@
 
 #include "gtest/gtest.h"
 #include <string>
-#include "classes/Message.hpp"
-#include "classes/Utility.hpp"
+#include "Message.hpp"
+#include "Utility.hpp"
 
 TEST(RequestTest, ParseLeaveChatroomRequest) {
     const std::string requestStr = R"(

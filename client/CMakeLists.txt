@@ -3,24 +3,17 @@
 set(This client)
 set(CMAKE_CXX_STANDARD 17)
 
-set(RAPIDJSON_DIR "../")
-set(COMMON_INTERFACE_DIR "../")
-
-include(${COMMON_INTERFACE_DIR}/classes/CMakeLists.txt)
-
 set(headers)
 set(sources)
 
 list(APPEND headers
   "Client.hpp"
   "GUI.hpp"
-  ${COMMON_INTERFACE_HEADERS}
 )
 
 list(APPEND sources 
   "Client.cpp"
   "main.cpp"
-  ${COMMON_INTERFACE_SOURCES}
 )
 
 # debug message
@@ -32,32 +25,22 @@ add_library(${This}_lib STATIC ${sources} ${headers})
 
 add_executable (${This} ${sources} ${headers})
 
-target_include_directories(${This} 
-  PUBLIC ${COMMON_INTERFACE_DIR}
-  PRIVATE ${RAPIDJSON_DIR}
+set(client_targets 
+  ${This} 
+  ${This}_lib
 )
 
-target_include_directories(${This}_lib 
-  PUBLIC ${COMMON_INTERFACE_DIR}
-  PRIVATE ${RAPIDJSON_DIR}
-)
-
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
-
-find_package(Boost "1.72.0" REQUIRED)
-
-message(STATUS "Client perform search")
-message(STATUS "BOOST_ROOT ${BOOST_ROOT}")
-message(STATUS "Boost_INCLUDE_DIRS ${Boost_INCLUDE_DIRS}")
-
-if(Boost_FOUND)
-  target_include_directories(${This} 
-    PUBLIC ${Boost_INCLUDE_DIRS} 
+foreach(ctarget ${client_targets})
+  target_include_directories(${ctarget} 
+    PRIVATE ${RAPIDJSON_INCLUDE_DIR}
+    PRIVATE ${common_INCLUDE_DIRS}
   )
-  target_include_directories(${This}_lib 
-    PUBLIC ${Boost_INCLUDE_DIRS} 
+  target_link_libraries(${ctarget}
+    PRIVATE common
   )
-endif()
+endforeach()
+
+# add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
 
 # Expose public includes to other
 # subprojects through cache variable.

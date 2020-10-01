@@ -7,7 +7,7 @@
 
 #include <boost/asio.hpp>
 
-#include "classes/Log.hpp"
+#include "Log.hpp"
 
 namespace asio = boost::asio;
 
