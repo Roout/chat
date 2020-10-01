@@ -2,20 +2,23 @@
 #define SESSION_TESTS_HPP
 
 #include "gtest/gtest.h"
+
 #include "Server.hpp"
 #include "Session.hpp"
 #include "Client.hpp"
-#include "Utility.hpp"
-#include "QueryType.hpp"
+#include "RoomService.hpp"
+
+#include "classes/Utility.hpp"
+#include "classes/QueryType.hpp"
 
 #include <memory>
 #include <thread>
 #include <regex>
 #include <cstddef>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 /// Helper functions:
 
@@ -151,9 +154,9 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
 
     std::array<MockChatroom, 2> expectedRooms;
     expectedRooms[0].name = "WoW 3.3.5a";
-    expectedRooms[0].id = m_server->CreateChatroom(expectedRooms[0].name);
+    expectedRooms[0].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[0].name);
     expectedRooms[1].name = "Dota 2";
-    expectedRooms[1].id = m_server->CreateChatroom(expectedRooms[1].name);
+    expectedRooms[1].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[1].name);
  
     /// 2. Request chatroom list
     Internal::Request listRequest{};
@@ -194,11 +197,11 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     this->ConfirmHandshake();
     
     /// #1 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #1"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #2"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #3"); 
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
+    const auto desiredId = m_server->GetRoomService()->CreateChatroom(desiredChatroomName); 
     
     // #2 Join
     this->JoinChatroom(desiredId, "random user name", *m_client);
@@ -216,9 +219,9 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     this->ConfirmHandshake();
 
     /// #1 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #1"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #2"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #3"); 
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
     
     // #2 Create & Join Chatroom
@@ -259,7 +262,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
 
     // #5 Confirm that the server has one room with this ID
     const auto expectedUsersCount { 1 }; // only this client!
-    const auto& currentChatroomList = m_server->GetChatroomList();
+    const auto& currentChatroomList = m_server->GetRoomService()->GetChatroomList();
     const std::regex rx { ".+\"id\":[ ]*(\\d+).+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
     std::smatch match;
     auto foundMatchRoom { false };
@@ -282,11 +285,11 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     this->ConfirmHandshake();
 
     /// #1 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #1"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #2"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #3"); 
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
+    const auto desiredId = m_server->GetRoomService()->CreateChatroom(desiredChatroomName); 
     
     // #2 Join Chatroom
     this->JoinChatroom(desiredId, "random user name", *m_client);
@@ -300,7 +303,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
 
     /// #4 Confirm that the server has one room with this ID and 1 user
     enum { ID, USERS, NAME };
-    const auto roomTupleOpt = m_server->GetChatroomData(desiredId);
+    const auto roomTupleOpt = m_server->GetRoomService()->GetChatroomData(desiredId);
     const auto expectedUsersCount { 1 }; // only this client!
     EXPECT_NE(roomTupleOpt, std::nullopt);
     EXPECT_EQ(desiredChatroomName, std::get<NAME>(*roomTupleOpt));
@@ -320,7 +323,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     this->WaitFor(chat.m_timeout);
 
     /// #6 Confirmn that we've left
-    const auto afterLeaveRoomOpt = m_server->GetChatroomData(desiredId);
+    const auto afterLeaveRoomOpt = m_server->GetRoomService()->GetChatroomData(desiredId);
     EXPECT_EQ(afterLeaveRoomOpt, std::nullopt);
 }
 
@@ -329,11 +332,11 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     this->ConfirmHandshake();
 
     // #1 Create chatrooms
-    m_server->CreateChatroom("Test chatroom #1"); 
-    m_server->CreateChatroom("Test chatroom #2"); 
-    m_server->CreateChatroom("Test chatroom #3"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #1"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #2"); 
+    m_server->GetRoomService()->CreateChatroom("Test chatroom #3"); 
     const std::string desiredChatroomName {"This TestF's Target chatroom"};
-    const auto desiredId = m_server->CreateChatroom(desiredChatroomName); 
+    const auto desiredId = m_server->GetRoomService()->CreateChatroom(desiredChatroomName); 
     
     // #2 Join Chatroom
     this->JoinChatroom(desiredId, "user #1", *m_client);

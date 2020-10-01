@@ -1,13 +1,14 @@
 #include "RequestHandlers.hpp"
 #include "Session.hpp"
-#include "Utility.hpp"
 #include "Chatroom.hpp"
+
+#include "classes/Utility.hpp"
 
 #include <string>
 
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/stringbuffer.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/stringbuffer.h"
 
 template<class Encoding, class Allocator>
 std::string Serialize(const rapidjson::GenericValue<Encoding, Allocator>& value) {

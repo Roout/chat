@@ -4,38 +4,47 @@ set(This tests)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(sources_files 
-  "all-tests.cpp"
-)
-set(header_files
+set(RAPIDJSON_DIR "../")
+set(CLIENT_DIR ${client_INCLUDE_DIRS})
+# NOTE: Boost's includes are transitively added through server_INCLUDE_DIRS.
+set(SERVER_DIR ${server_INCLUDE_DIRS})
+set(COMMON_INTERFACE_DIR "../")
+
+message(STATUS "SERVER_DIR: ${SERVER_DIR}")
+message(STATUS "CLIENT_DIR: ${CLIENT_DIR}")
+
+set(headers)
+set(sources)
+
+list(APPEND headers
   "message-tests.hpp"
   "single-client-messaging-tests.hpp"
-
-  "../rapidjson/document.h"
-  "../rapidjson/writer.h"
-  "../rapidjson/stringbuffer.h"
 )
 
-enable_testing()
+list(APPEND sources 
+  "all-tests.cpp"
+)
 
-add_executable(${This} ${sources_files} ${header_files})
+enable_testing() 
+
+add_executable(${This} ${sources} ${headers})
 
 target_include_directories(${This} 
-    PUBLIC "../classes"
-    PUBLIC "../server"
-    PUBLIC "../client"
-    PUBLIC "../rapidjson"
+  PUBLIC ${RAPIDJSON_DIR}
+  PUBLIC ${COMMON_INTERFACE_DIR}
+  PUBLIC ${SERVER_DIR}
+  PUBLIC ${CLIENT_DIR}
 )
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
 
 target_link_libraries(${This} PUBLIC
-    gtest_main
-    server_lib
-    client_lib
+  gtest_main
+  server_lib
+  client_lib
 )
 
 add_test(
-    NAME ${This}
-    COMMAND ${This}
+  NAME ${This}
+  COMMAND ${This}
 )

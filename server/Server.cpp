@@ -1,12 +1,12 @@
 ﻿#include "Server.hpp"
+#include "RoomService.hpp"
 #include "Session.hpp"
 
 Server::Server(std::shared_ptr<asio::io_context> context, std::uint16_t port) :
     m_context { context },
     m_acceptor { *m_context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port) },
-    m_hall { "unautherized users" }
+    m_service { std::make_shared<chat::RoomService>() }
 {
-    m_chatrooms.reserve(40);
 }
 
 void Server::Start() {
@@ -21,9 +21,11 @@ void Server::Start() {
             this->Write(LogType::info, 
                 "Server accepted connection on endpoint: ", m_socket->remote_endpoint(err), "\n"
             ); 
-            const auto newSession { std::make_shared<Session>(std::move(*m_socket), this) };
+            // Session won't live more than room service cuz service was destroyed or closed
+            // when all sessions had been closed.
+            const auto newSession { std::make_shared<Session>(std::move(*m_socket), m_service.get(), m_context.get()) };
             newSession->WaitSynchronizationRequest();
-            if(!m_hall.AddSession(newSession)) {
+            if(!m_service->AddSession(newSession)) {
                 // TODO: failed to add new session most likely due to connection limit 
             }
             // wait for the new connections again
@@ -40,117 +42,5 @@ void Server::Shutdown() {
             "Server closed acceptor with error: ", ec.message(), "\n"
         );
     }
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_hall.Close();
-    for(auto& [id, chat]: m_chatrooms) chat.Close();
-}
-
-bool Server::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    const auto isRemoved = m_hall.RemoveSession(session.get());
-    if(!isRemoved) {
-        // TODO: can't find session in chatroom for unAuth
-    }
-    // find chatroom with required id
-    const auto it = m_chatrooms.find(chatroomId);
-    // if chatroom is found then try to assign session to chatroom
-    if( it != m_chatrooms.end() ) {
-        // if chatroom was assigned successfully return true otherwise false
-        if( it->second.AddSession(session) ) {
-            return true;
-        } 
-        else { // failed to join chatroom, go back to hall
-            const auto isAdded = m_hall.AddSession(session);
-            if( !isAdded ) {
-                // some weird error!
-            }
-        }
-    }
-    return false;
-}
-
-void Server::BroadcastOnly(
-    const Session* source, 
-    const std::string& message, 
-    std::function<bool(const Session&)>&& condition
-) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    /// TODO: handle possible errors
-    const auto id = source->GetUser().m_chatroom;
-    m_chatrooms.at(id).Broadcast(message, condition);
-}
-
-void Server::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
-    // Check whether it's a hall chatroom
-    if( chatroomId == m_hall.GetId()) {
-        /// TODO: user can't leave hall!
-        return;
-    }     
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if( const auto chat = m_chatrooms.find(chatroomId); chat != m_chatrooms.end() ) {
-        if( chat->second.RemoveSession(session.get()) ) {
-            if( this->IsEmpty(chatroomId) ) {
-                this->RemoveChatroom(chatroomId, false);
-            } 
-            const auto isInHall = m_hall.AddSession(session);
-            if( !isInHall ) {
-                /// TODO: some weird error
-            }
-        }
-    }
-}
-
-std::vector<std::string> Server::GetChatroomList() const noexcept {
-    std::vector<std::string> list;
-    list.reserve(m_chatrooms.size());
-
-    std::unique_lock<std::mutex> lock(m_mutex, std::try_to_lock);
-    for(const auto& [id, chatroom] : m_chatrooms) {
-        list.emplace_back(chatroom.AsJSON());
-    }
-    lock.unlock();
-    return list;
-}
-
-std::size_t Server::CreateChatroom(std::string name) {
-    chat::Chatroom room { name };
-    const std::size_t id { room.GetId() };
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_chatrooms.emplace(id, std::move(room));
-    return id;
-}
-
-std::size_t Server::GetChatroom(const Session*const session) const noexcept {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    // check the hall
-    if( m_hall.Contains(session) ) {
-        return m_hall.GetId();
-    }
-    // check user's chatrooms
-    for(const auto& [id, room]: m_chatrooms) {
-        if( room.Contains(session) ) {
-            return id;
-        }
-    }
-    return chat::Chatroom::NO_ROOM;
-}
-
-bool Server::ExistChatroom(std::size_t id) const noexcept {
-    std::lock_guard<std::mutex> lock(m_mutex);  
-    return m_chatrooms.find(id) != m_chatrooms.cend();
-}
-
-void Server::RemoveChatroom(std::size_t chatroomId, bool mustClose) {
-    const auto it = m_chatrooms.find(chatroomId);
-    if( it != m_chatrooms.end() ) {
-        if( mustClose ) it->second.Close();
-        m_chatrooms.erase(it);
-    }
-}
-
-bool Server::IsEmpty(std::size_t chatroomId) const noexcept {
-    const auto it = m_chatrooms.find(chatroomId);
-    return (it == m_chatrooms.cend() || it->second.IsEmpty());
+    m_service->Close();
 }

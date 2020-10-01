@@ -20,7 +20,7 @@ events have to wait until the handler completes the execution before being allow
           (i.e. no concurrent invocation). Use of strands allows execution of code 
           in a multithreaded program without the need for explicit locking (e.g. using mutexes). 
 
-`boost::asio::post()` without explicity stated executor such as `io_context`, `strand` (strand is constructed with executor context) will use `system_executor`. Meanwhile `system_executor` will use system's internal threads so data race can be observed if programmer ignore this fact.
+`boost::asio::post()` without explicity stated executor such as `io_context`, `strand` (strand is constructed with executor context) will use `system_executor`. Meanwhile `system_executor` will use system's internal threads so data race can be observed if programmer ignore this fact. (See documentation)[https://www.boost.org/doc/libs/1_69_0/doc/html/boost_asio/reference/asynchronous_operations.html#boost_asio.reference.asynchronous_operations.associated_i_o_executor]
 
 Example #1. Using system's executer:
 `boost::asio::post([](){}); // call with only callable object: function`

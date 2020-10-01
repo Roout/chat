@@ -3,38 +3,43 @@
 set(This client)
 set(CMAKE_CXX_STANDARD 17)
 
-set ( sources_files 
-  "Client.cpp"
-  "../classes/DoubleBuffer.cpp"
-  "../classes/Message.cpp"
-  "main.cpp"
-)
-set ( header_files
+set(RAPIDJSON_DIR "../")
+set(COMMON_INTERFACE_DIR "../")
+
+include(${COMMON_INTERFACE_DIR}/classes/CMakeLists.txt)
+
+set(headers)
+set(sources)
+
+list(APPEND headers
   "Client.hpp"
   "GUI.hpp"
-  "../classes/Log.hpp"
-  "../classes/DoubleBuffer.hpp"
-  "../classes/QueryType.hpp"
-  "../classes/Message.hpp"
-  "../classes/Utility.hpp"
-  
-  "../rapidjson/document.h"
-  "../rapidjson/writer.h"
-  "../rapidjson/stringbuffer.h"
+  ${COMMON_INTERFACE_HEADERS}
 )
 
-add_library(${This}_lib STATIC ${sources_files} ${header_files})
+list(APPEND sources 
+  "Client.cpp"
+  "main.cpp"
+  ${COMMON_INTERFACE_SOURCES}
+)
 
-add_executable (${This} ${sources_files} ${header_files})
+# debug message
+message(STATUS "Client debug message: ")
+message(STATUS "\tHeaders: ${headers}")
+message(STATUS "\tSources: ${sources}")
+
+add_library(${This}_lib STATIC ${sources} ${headers})
+
+add_executable (${This} ${sources} ${headers})
 
 target_include_directories(${This} 
-  PUBLIC "../classes"
-  PUBLIC "../rapidjson"
+  PUBLIC ${COMMON_INTERFACE_DIR}
+  PRIVATE ${RAPIDJSON_DIR}
 )
 
 target_include_directories(${This}_lib 
-  PUBLIC "../classes"
-  PUBLIC "../rapidjson"
+  PUBLIC ${COMMON_INTERFACE_DIR}
+  PRIVATE ${RAPIDJSON_DIR}
 )
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
@@ -53,3 +58,10 @@ if(Boost_FOUND)
     PUBLIC ${Boost_INCLUDE_DIRS} 
   )
 endif()
+
+# Expose public includes to other
+# subprojects through cache variable.
+set(${This}_INCLUDE_DIRS 
+  ${PROJECT_SOURCE_DIR}/client
+  CACHE INTERNAL "${This}: Include Directories" FORCE
+)
