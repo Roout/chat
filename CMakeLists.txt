@@ -2,6 +2,8 @@
 
 project(chat-app)
 
+enable_testing()
+
 include("${CMAKE_SOURCE_DIR}/vendor/rapidjson.cmake")
 
 # Download and unpack googletest at configure time

@@ -30,6 +30,8 @@ set(client_targets
   ${This}_lib
 )
 
+add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
+
 foreach(ctarget ${client_targets})
   target_include_directories(${ctarget} 
     PRIVATE ${RAPIDJSON_INCLUDE_DIR}

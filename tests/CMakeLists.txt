@@ -23,8 +23,6 @@ list(APPEND sources
   "all-tests.cpp"
 )
 
-enable_testing() 
-
 add_executable(${This} ${sources} ${headers})
 
 target_include_directories(${This} 
