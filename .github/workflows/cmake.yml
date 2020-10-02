@@ -31,12 +31,13 @@ jobs:
     - name: Print enviroment Variable
       run: |
         export root=$(pwd)
-        export include_dir=$BOOST_ROOT/boost_1_72_0
+        export include_dir=$root/boost_1_72_0
         echo ::set-env name=BOOST_ROOT::$root
         echo ::set-env name=BOOST_INCLUDEDIR::$include_dir
     
     - name: Create Build Environment
       run: |
+        echo "BOOST_ROOT: $BOOST_ROOT"
         echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
         cmake -E make_directory ${{runner.workspace}}/build
 
