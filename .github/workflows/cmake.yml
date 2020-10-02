@@ -30,14 +30,10 @@ jobs:
             
     - name: Print enviroment Variable
       run: |
-        echo "current directory: $PWD"
-        echo "before boost root: $BOOST_ROOT"
-        echo "before boost include dir: $BOOST_INCLUDEDIR"
-        export BOOST_ROOT=$(pwd)
-        export BOOST_INCLUDEDIR=$BOOST_ROOT/boost_1_72_0
-        ls
-        echo "after boost root: $BOOST_ROOT"
-        echo "after boost include dir: $BOOST_INCLUDEDIR"
+        export root=$(pwd)
+        export include_dir=$BOOST_ROOT/boost_1_72_0
+        echo ::set-env name=BOOST_ROOT::$root
+        echo ::set-env name=BOOST_INCLUDEDIR::$include_dir
     
     - name: Create Build Environment
       run: |
