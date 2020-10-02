@@ -12,8 +12,9 @@ Server::Server(std::shared_ptr<asio::io_context> context, std::uint16_t port) :
 void Server::Start() {
     m_socket.emplace(*m_context);
     m_acceptor.set_option(
-        // No need to avoid TIME_WAIT state which possibly will tie the port
-        asio::ip::tcp::acceptor::reuse_address(false)
+        // To avoid exception compiling with github actions:
+        // C++ exception with description "bind: Address already in use"
+        asio::ip::tcp::acceptor::reuse_address(true)
     );
     m_acceptor.async_accept( *m_socket, [this](const boost::system::error_code& code ) {
         if( !code ) {
