@@ -16,8 +16,16 @@ list(APPEND sources
   "main.cpp"
 )
 
+find_package(Threads REQUIRED)
+
 # debug message
 message(STATUS "Client debug message: ")
+if(${Threads_FOUND})
+  message(STATUS "Threads_FOUND is true")
+  message(STATUS "CMAKE_THREAD_LIBS_INIT is ${CMAKE_THREAD_LIBS_INIT}")
+else()
+  message(STATUS "Threads_FOUND is false")
+endif()
 message(STATUS "\tHeaders: ${headers}")
 message(STATUS "\tSources: ${sources}")
 
@@ -39,6 +47,7 @@ foreach(ctarget ${client_targets})
   )
   target_link_libraries(${ctarget}
     PRIVATE common
+    PRIVATE ${CMAKE_THREAD_LIBS_INIT}
   )
 endforeach()
 
