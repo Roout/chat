@@ -34,6 +34,7 @@ jobs:
         echo "current directory: $PWD"
         echo "before boost root: $BOOST_ROOT"
         export BOOST_ROOT=$(pwd)
+        ls
         echo "after boost root: $BOOST_ROOT"
         
     #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
