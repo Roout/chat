@@ -15,9 +15,7 @@ jobs:
   build-project:
     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
-    
+    steps:    
     # install dependencies
     - name: Download boost
       run: |
@@ -33,11 +31,17 @@ jobs:
       run: |
         echo "current directory: $PWD"
         echo "before boost root: $BOOST_ROOT"
-        export BOOST_ROOT=$(pwd)
+        echo "before boost include dir: $BOOST_INCLUDEDIR"
+        export BOOST_ROOT=$(pwd)/boost_1_72_0
+        export BOOST_INCLUDEDIR=$(BOOST_ROOT)/boost/include
         ls
         echo "after boost root: $BOOST_ROOT"
+        echo "after boost include dir: $BOOST_INCLUDEDIR"
+        
         
     #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
+    
+    - uses: actions/checkout@v2
     
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
