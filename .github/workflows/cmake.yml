@@ -33,7 +33,7 @@ jobs:
         echo "before boost root: $BOOST_ROOT"
         echo "before boost include dir: $BOOST_INCLUDEDIR"
         export BOOST_ROOT=$(pwd)/boost_1_72_0
-        export BOOST_INCLUDEDIR=$(BOOST_ROOT)/boost/include
+        export BOOST_INCLUDEDIR=$BOOST_ROOT/boost/include
         ls
         echo "after boost root: $BOOST_ROOT"
         echo "after boost include dir: $BOOST_INCLUDEDIR"
