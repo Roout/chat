@@ -33,17 +33,16 @@ jobs:
         echo "current directory: $PWD"
         echo "before boost root: $BOOST_ROOT"
         echo "before boost include dir: $BOOST_INCLUDEDIR"
-        export BOOST_ROOT=$(pwd)/boost_1_72_0
-        export BOOST_INCLUDEDIR=$BOOST_ROOT/boost/include
+        export BOOST_ROOT=$(pwd)
+        export BOOST_INCLUDEDIR=$BOOST_ROOT/boost_1_72_0
         ls
         echo "after boost root: $BOOST_ROOT"
         echo "after boost include dir: $BOOST_INCLUDEDIR"
-        
-        
-    #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
     
     - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/build
+      run: |
+        echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
+        cmake -E make_directory ${{runner.workspace}}/build
 
     - name: Configure CMake
       shell: bash
