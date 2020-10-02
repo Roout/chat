@@ -37,7 +37,7 @@ jobs:
       run: |
         echo "current directory: $PWD"
         echo "before boost root: $BOOST_ROOT"
-        echo "BOOST_ROOT=${{PWD}}" >> $BOOST_ROOT
+        echo "BOOST_ROOT=$PWD" >> $BOOST_ROOT
         echo "after boost root: $BOOST_ROOT"
         
     #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
