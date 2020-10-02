@@ -8,8 +8,9 @@ set(CLIENT_DIR ${client_INCLUDE_DIRS})
 # NOTE: Boost's includes are transitively added through server_INCLUDE_DIRS.
 set(SERVER_DIR ${server_INCLUDE_DIRS})
 
-message(STATUS "SERVER_DIR: ${SERVER_DIR}")
-message(STATUS "CLIENT_DIR: ${CLIENT_DIR}")
+message(STATUS "Tests debug message:")
+message(STATUS "\tSERVER_DIR: ${SERVER_DIR}")
+message(STATUS "\tCLIENT_DIR: ${CLIENT_DIR}")
 
 set(headers)
 set(sources)
