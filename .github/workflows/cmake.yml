@@ -15,15 +15,16 @@ jobs:
   build-project:
     runs-on: ubuntu-latest
 
-    steps:    
+    steps:  
+    - uses: actions/checkout@v2  
+    
     # install dependencies
     - name: Download boost
       run: |
           sudo wget -O boost_1_72_0.tar.gz https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
           tar -zxvf boost_1_72_0.tar.gz
           rm boost_1_72_0.tar.gz
-          cd boost_1_72_0/
-          export BOOST_ROOT=$(pwd)
+          cd boost_1_72_0
           ./bootstrap.sh  
           ./b2 headers
             
@@ -40,8 +41,6 @@ jobs:
         
         
     #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
-    
-    - uses: actions/checkout@v2
     
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
