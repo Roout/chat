@@ -52,6 +52,3 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: ctest -C $BUILD_TYPE
-      
-notifications:
-  email: false
