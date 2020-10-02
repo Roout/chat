@@ -8,7 +8,8 @@ on:
 
 env:
   BUILD_TYPE: Release
-
+  BOOST_INCLUDEDIR: NOT_FOUND
+  BOOST_LIBRARYDIR: NOT_FOUND
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,18 +19,21 @@ jobs:
         
     # install dependencies
     - name: Download boost
-      run: sudo wget -O boost_1_72_0.tar.gz https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
-          && tar -zxvf boost_1_72_0.tar.gz
-          && cd boost_1_72_0/
-          && export PATH=$PATH:"`pwd`"
-          && export BOOST_ROOT=$(pwd)
-          && ./bootstrap.sh  
-          && ./b2 headers 
+      run: |
+          sudo wget -O boost_1_72_0.tar.gz https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
+          tar -zxvf boost_1_72_0.tar.gz
+          cd boost_1_72_0/
+          export PATH=$PATH:"`pwd`"
+          export BOOST_ROOT=$(pwd)
+          ./bootstrap.sh  
+          ./b2 headers 
           
     - name: Print enviroment Variable
-      run:  echo $BOOST_ROOT
-      
-    #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include -DBOOST_LIBRARYDIR=../boost/lib
+      run: |
+        echo "boost root: $BOOST_ROOT"
+        echo "BOOST_INCLUDEDIR=$BOOST_ROOT/boost/include" >> $BOOST_INCLUDEDIR
+
+    #-DBOOST_ROOT=../boost -DBOOST_INCLUDEDIR=../boost/boost/include
     
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
@@ -48,3 +52,6 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: ctest -C $BUILD_TYPE
+      
+notifications:
+  email: false
