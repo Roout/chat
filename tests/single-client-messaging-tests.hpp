@@ -80,7 +80,7 @@ protected:
      */
     void ConfirmHandshake() {
         // blocks
-        this->WaitFor(m_waitAckTimeout);
+        this->WaitFor(m_waitTimeout);
         // test
         ASSERT_TRUE(m_client->IsAcknowleged()) << "Client hasn't been acknowleged";
         EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
@@ -99,7 +99,7 @@ protected:
     void JoinChatroom(std::size_t id, const std::string& username, Client& client) {
         Internal::Request request{};
         request.m_query = Internal::QueryType::JOIN_CHATROOM;
-        request.m_timeout = 30;
+        request.m_timeout = m_waitTimeout;
         request.m_timestamp = Utils::GetTimestamp();
         // set up attachment
         rapidjson::Document doc(rapidjson::kObjectType);
@@ -123,7 +123,7 @@ protected:
     std::shared_ptr<boost::asio::io_context> m_context {};
     std::vector<std::thread> m_threads {};
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
-    const std::size_t m_waitAckTimeout { 128 };
+    const std::size_t m_waitTimeout { 128 };
 };
 
 /**
@@ -162,7 +162,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     Internal::Request listRequest{};
     listRequest.m_query = Internal::QueryType::LIST_CHATROOM;
     listRequest.m_timestamp = Utils::GetTimestamp();
-    listRequest.m_timeout = 30;
+    listRequest.m_timeout = m_waitTimeout;
     std::string serialized {};
     listRequest.Write(serialized);
     // send request to server
@@ -227,7 +227,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     // #2 Create & Join Chatroom
     Internal::Request request{};
     request.m_query = Internal::QueryType::CREATE_CHATROOM;
-    request.m_timeout = 30;
+    request.m_timeout = m_waitTimeout;
     request.m_timestamp = Utils::GetTimestamp();
     // Set up attachment
     rapidjson::Document doc(rapidjson::kObjectType);
@@ -312,7 +312,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     /// #5 Leave chatroom
     Internal::Request chat{};
     chat.m_query = Internal::QueryType::LEAVE_CHATROOM;
-    chat.m_timeout = 30;
+    chat.m_timeout = m_waitTimeout;
     chat.m_timestamp = Utils::GetTimestamp();
     // send request
     std::string serialized {};
@@ -357,7 +357,7 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     const std::string msg { "Hello!I'm Bob!" };
     Internal::Request chat{};
     chat.m_query = Internal::QueryType::CHAT_MESSAGE;
-    chat.m_timeout = 30;
+    chat.m_timeout = m_waitTimeout;
     chat.m_timestamp = Utils::GetTimestamp();
     chat.m_attachment = "{\"message\":\"" + msg + "\"}";
     // send request
