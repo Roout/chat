@@ -13,6 +13,7 @@ set(COMMON_INTERFACE_HEADERS
 	include/QueryType.hpp
 	include/User.hpp
 	include/Utility.hpp
+	include/RequestQueue.hpp
 )
 
 set(COMMON_INTERFACE_SOURCES
