@@ -32,14 +32,15 @@ jobs:
       run: |
         export root=$(pwd)
         export include_dir=$root/boost_1_72_0
-        echo ::set-env name=BOOST_ROOT::$root
-        echo ::set-env name=BOOST_INCLUDEDIR::$include_dir
+        echo "{BOOST_ROOT}={$root}" >> $GITHUB_ENV
+        echo "{BOOST_INCLUDEDIR}={$include_dir}" >> $GITHUB_ENV
     
     - name: Create Build Environment
       run: |
         echo "BOOST_ROOT: $BOOST_ROOT"
         echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
         cmake -E make_directory ${{runner.workspace}}/build
+        
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
