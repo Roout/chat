@@ -24,9 +24,10 @@ void Server::Start() {
             ); 
             // Session won't live more than room service cuz service was destroyed or closed
             // when all sessions had been closed.
-            const auto newSession { std::make_shared<Session>(std::move(*m_socket), m_service.get(), m_context.get()) };
-            newSession->WaitSynchronizationRequest();
-            if(!m_service->AddSession(newSession)) {
+            const auto session { std::make_shared<Session>(std::move(*m_socket), m_service, m_context) };
+            session->Subscribe();
+            session->Read();
+            if(!m_service->AddSession(session)) {
                 // TODO: failed to add new session most likely due to connection limit 
             }
             // wait for the new connections again

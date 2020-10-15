@@ -9,6 +9,7 @@ set(sources)
 list(APPEND headers
   "Server.hpp"
   "Session.hpp"
+  "Connection.hpp"
   "Chatroom.hpp"
   "RoomService.hpp"
   "RequestHandlers.hpp"
@@ -17,6 +18,7 @@ list(APPEND headers
 list(APPEND sources 
   "Server.cpp"
   "Session.cpp"
+  "Connection.cpp"
   "Chatroom.cpp"
   "RoomService.cpp"
   "RequestHandlers.cpp"
