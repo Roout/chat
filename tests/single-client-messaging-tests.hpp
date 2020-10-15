@@ -5,6 +5,7 @@
 
 #include "Server.hpp"
 #include "Session.hpp"
+#include "Connection.hpp"
 #include "Client.hpp"
 #include "RoomService.hpp"
 

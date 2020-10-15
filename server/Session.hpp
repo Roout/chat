@@ -2,6 +2,7 @@
 #define SESSION_HPP
 
 #include <string>
+#include <memory>
 #include <cstddef>
 #include <functional>
 
@@ -18,40 +19,49 @@ namespace chat {
     class Chatroom;
     class RoomService;
 }
+namespace net {
+    class Connection;
+}
+namespace rt {
+    class RequestQueue;
+}
 
+// TODO: try to remove the inheritance
 class Session final : public std::enable_shared_from_this<Session> {
 public:
 
     Session( 
         asio::ip::tcp::socket && socket, 
-        chat::RoomService * const service,
-        asio::io_context * const context
+        std::shared_ptr<chat::RoomService> service,
+        std::shared_ptr<asio::io_context> context
     );
 
     ~Session() {
-        if( m_state != State::DISCONNECTED ) {
-            this->Close();
-        }
+        this->Close();
     };
 
     /**
-     * Invoked to initiate a communication with client 
+     * Initiate read operation for the connection 
      */
-    void WaitSynchronizationRequest();
+    void Read();
+
+    void Write(std::string text);
 
     /**
-     * Write @text to remote connection.
-     * @note
-     *  Invoke private Write() overload via asio::post() through strand
+     * Close connection  
      */
-    void Write(std::string text);
+    void Close();
+
+    void AcquireRequests();
+
+    void Subscribe();
 
     const Internal::User& GetUser() const noexcept {
         return m_user;
     }
 
     bool IsClosed() const noexcept {
-        return m_state == State::DISCONNECTED;
+        return m_state == State::CLOSED;
     }
     
     bool IsWaitingSyn() const noexcept {
@@ -64,7 +74,6 @@ public:
     
 
     /// Interface used by response handlers
-    /// TODO: Delegate this responsibility to other class 
     void AcknowledgeClient() noexcept {
         m_state = State::ACKNOWLEDGED;
     }
@@ -86,59 +95,10 @@ public:
         std::function<bool(const Session&)>&& condition
     );
     
-    /**
-     * Shutdown Session and close the socket  
-     */
-    void Close();
-    
 private:
-    
-    /**
-     * Logging the custom message
-     */
-    template<class ...Args>
-    void AddLog(const LogType ty, Args&& ...args);
-
-    /**
-     * Read data from the remote connection.
-     * At first it's invoked at server's `on accept` completion handler.
-     * Otherwise it can be invoked within `on read` completion handler. 
-     * This prevents a concurrent execution of the read operation on the same socket.
-     */
-    void Read();
-    
-    /**
-     * This method calls async I/O write operation.
-     */
-    void Write();
-
-    void WriteSomeHandler(
-        const boost::system::error_code& error, 
-        std::size_t transferredBytes
-    );
-
-    void ReadSomeHandler(
-        const boost::system::error_code& error, 
-        std::size_t transferredBytes
-    );
-
-    void ExpiredDeadlineHandler(
-        const boost::system::error_code& error
-    );
-
-    /**
-     * Build reply base on incoming request
-     * 
-     * @param request
-     *  This is request which came from the remote peer. 
-     */
-    void HandleRequest(const Internal::Request& request);
-
-    /// Properties
-private:
-    enum class State {
+    enum class State: std::uint8_t {
         /**
-         * This is a state when a session was just connected
+         * This is a state when a session was just connectied
          * and initiate deadline timer waiting for the SYN 
          * request. 
          */
@@ -149,68 +109,39 @@ private:
          * with the request and ACK response was sent. 
          */
         ACKNOWLEDGED,
-        /**
-         * This is a state when a connection between peers 
-         * was terminated/closed or hasn't even started. 
-         * Reason isn't important.
-         */
-        DISCONNECTED
+        CLOSED
     };
 
-    std::shared_ptr<Log> m_logger{ nullptr };
-
     /**
-     * It's a socket connected to the remote peer. 
+     * Build reply base on incoming request
+     * 
+     * @param request
+     *  This is request which came from the remote peer. 
      */
-    asio::ip::tcp::socket m_socket;
+    void HandleRequest(Internal::Request&& request);
 
-    chat::RoomService * const m_service { nullptr };
-
+    /// Properties
+private:
     /**
      * It's a user assosiated with remote connection 
      */
-    Internal::User m_user;
+    Internal::User m_user {};
+    
+    std::shared_ptr<chat::RoomService> m_service { nullptr };
 
-    asio::io_context::strand m_strand;
+    std::shared_ptr<rt::RequestQueue> m_incommingRequests { nullptr };
 
-    Buffers m_outbox;
+    std::shared_ptr<asio::io_context> m_context { nullptr };
 
-    /**
-     * A buffer used for incoming information.
-     */
-    asio::streambuf m_inbox;
+    std::shared_ptr<net::Connection> m_connection { nullptr };
 
-    /**
-     * This is an indication whether the socket writing operation 
-     * is ongoing or not. 
-     */
-    bool m_isWriting { false };
+    State m_state { State:: CLOSED };
 
     /**
-     * This is indication of the current state of this session,
-     * i.e. stage of communication.  
+     * Time in milliseconds the session is ready to wait for the SYN request 
      */
-    State m_state { State::WAIT_SYN };
-
-    /**
-     * This is a timer used to set up deadline for the client
-     * and invoke handler for the expired request.
-     * Now it's used to wait for the synchronization request.  
-     */
-    asio::deadline_timer m_timer;
-
-    /**
-     * Define hom long the session can wait for the SYN request 
-     * from the client. Time is in milliseconds.
-     */
-    std::size_t m_synTime { 128 };
+    const std::size_t m_timeout { 256 };
 };
-
-
-template<class ...Args>
-void Session::AddLog(const LogType ty, Args&& ...args) {
-    m_logger->Write(ty, std::forward<Args>(args)...);
-}
 
 
 #endif // SESSION_HPP
