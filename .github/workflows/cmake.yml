@@ -9,10 +9,6 @@ jobs:
   build-project:
     runs-on: ubuntu-latest
 
-    env:
-      BOOST_ROOT: "empty"
-      BOOST_INCLUDEDIR: "empty"
-
     steps:  
     - uses: actions/checkout@v2  
     
