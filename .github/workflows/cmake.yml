@@ -16,13 +16,12 @@ jobs:
       run: |
         echo "BOOST_ROOT: $BOOST_ROOT"
         echo "BOOST_ROOT_1_72_0: $BOOST_ROOT_1_72_0"
-        echo "BOOST_ROOT_1_73_0: $BOOST_ROOT_1_73_0"
         echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
 
     - name: Set enviroment variable
       run: |
         echo "{BOOST_ROOT}={$BOOST_ROOT_1_72_0}" >> $GITHUB_ENV
-        echo "{BOOST_INCLUDEDIR}={$BOOST_ROOT_1_72_0\boost\include}" >> $GITHUB_ENV
+        echo "{BOOST_INCLUDEDIR}={$BOOST_ROOT_1_72_0\include\boost}" >> $GITHUB_ENV
     
     - name: Create Build Environment
       run: |
