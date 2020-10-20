@@ -2,21 +2,12 @@ name: Build and Test
 
 on: pull_request
 
-env:
-  BUILD_TYPE: Release
-
 jobs:
   build-project:
     runs-on: ubuntu-latest
 
     steps:  
     - uses: actions/checkout@v2  
-
-    - name: Check boost (2)
-      run: |
-        echo "BOOST_ROOT: $BOOST_ROOT"
-        echo "BOOST_ROOT_1_72_0: $BOOST_ROOT_1_72_0"
-        echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
 
     - name: Set enviroment variable
       run: |
