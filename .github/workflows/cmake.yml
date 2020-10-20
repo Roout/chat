@@ -11,19 +11,6 @@ jobs:
 
     steps:  
     - uses: actions/checkout@v2  
-    
-    - name: Set boost environmental variable
-      run: |
-        echo "::set-env name=BOOST_ROOT::$env:BOOST_ROOT_1_72_0"
-        echo "::set-env name=BOOST_INCLUDEDIR::${{ env.BOOST_ROOT }}\boost\include"
-        echo "::set-env name=BOOST_LIBRARYDIR::${{ env.BOOST_ROOT }}\lib"
-
-    - name: Check boost (2)
-      run: |
-        echo "BOOST_ROOT: $BOOST_ROOT"
-        echo "BOOST_ROOT_1_72_0: $BOOST_ROOT_1_72_0"
-        echo "BOOST_ROOT_1_73_0: $BOOST_ROOT_1_73_0"
-        echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
 
     - name: Check boost (2)
       run: |
@@ -34,10 +21,8 @@ jobs:
 
     - name: Set enviroment variable
       run: |
-        export root=$(pwd)
-        export include_dir=$root/boost_1_72_0
-        echo "{BOOST_ROOT}={$root}" >> $GITHUB_ENV
-        echo "{BOOST_INCLUDEDIR}={$include_dir}" >> $GITHUB_ENV
+        echo "{BOOST_ROOT}={${{ env.BOOST_ROOT_1_72_0 }}}" >> $GITHUB_ENV
+        echo "{BOOST_INCLUDEDIR}={${{ env.BOOST_ROOT_1_72_0 }}\boost\include}" >> $GITHUB_ENV
     
     - name: Create Build Environment
       run: |
