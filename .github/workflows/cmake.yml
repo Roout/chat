@@ -1,15 +1,9 @@
 name: Build and Test
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: pull_request
 
 env:
   BUILD_TYPE: Release
-  BOOST_INCLUDEDIR: NOT_FOUND
-  BOOST_ROOT: NOT_FOUND
 
 jobs:
   build-project:
@@ -17,23 +11,11 @@ jobs:
 
     steps:  
     - uses: actions/checkout@v2  
-    
-    # install dependencies
-    - name: Download boost
-      run: |
-          sudo wget -O boost_1_72_0.tar.gz https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.gz
-          tar -zxvf boost_1_72_0.tar.gz
-          rm boost_1_72_0.tar.gz
-          cd boost_1_72_0
-          ./bootstrap.sh  
-          ./b2 headers
-            
+
     - name: Set enviroment variable
       run: |
-        export root=$(pwd)
-        export include_dir=$root/boost_1_72_0
-        echo "{BOOST_ROOT}={$root}" >> $GITHUB_ENV
-        echo "{BOOST_INCLUDEDIR}={$include_dir}" >> $GITHUB_ENV
+        echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
+        echo "BOOST_INCLUDEDIR=$BOOST_ROOT_1_72_0/include/boost" >> $GITHUB_ENV
     
     - name: Create Build Environment
       run: |
