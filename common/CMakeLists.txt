@@ -36,7 +36,7 @@ target_include_directories(${This}
 
 add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
 
-find_package(Boost REQUIRED)
+find_package(Boost "1.72.0" REQUIRED)
 
 message(STATUS "Common perform search")
 message(STATUS "BOOST_ROOT ${BOOST_ROOT}")

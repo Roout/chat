@@ -9,9 +9,20 @@ jobs:
   build-project:
     runs-on: ubuntu-latest
 
+    env:
+      BOOST_ROOT: "empty"
+      BOOST_INCLUDEDIR: "empty"
+
     steps:  
     - uses: actions/checkout@v2  
     
+    - name: Check boost (2)
+      run: |
+        echo "BOOST_ROOT: $BOOST_ROOT"
+        echo "BOOST_ROOT_1_72_0: $BOOST_ROOT_1_72_0"
+        echo "BOOST_ROOT_1_73_0: $BOOST_ROOT_1_73_0"
+        echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
+
     # install dependencies
     - name: Download boost
       run: |
@@ -21,7 +32,14 @@ jobs:
           cd boost_1_72_0
           ./bootstrap.sh  
           ./b2 headers
-            
+
+    - name: Check boost (2)
+      run: |
+        echo "BOOST_ROOT: $BOOST_ROOT"
+        echo "BOOST_ROOT_1_72_0: $BOOST_ROOT_1_72_0"
+        echo "BOOST_ROOT_1_73_0: $BOOST_ROOT_1_73_0"
+        echo "BOOST_INCLUDEDIR: $BOOST_INCLUDEDIR"
+
     - name: Set enviroment variable
       run: |
         export root=$(pwd)
