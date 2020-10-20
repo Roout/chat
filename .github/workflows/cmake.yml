@@ -1,15 +1,9 @@
 name: Build and Test
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: pull_request
 
 env:
   BUILD_TYPE: Release
-  BOOST_INCLUDEDIR: NOT_FOUND
-  BOOST_ROOT: NOT_FOUND
 
 jobs:
   build-project:
@@ -44,12 +38,12 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: cmake --build . --config $BUILD_TYPE
+      run: cmake --build . --config Release
 
     - name: Test
       working-directory: ${{runner.workspace}}/build
