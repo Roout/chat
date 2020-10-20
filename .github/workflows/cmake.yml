@@ -21,8 +21,8 @@ jobs:
 
     - name: Set enviroment variable
       run: |
-        echo "{BOOST_ROOT}={${{ env.BOOST_ROOT_1_72_0 }}}" >> $GITHUB_ENV
-        echo "{BOOST_INCLUDEDIR}={${{ env.BOOST_ROOT_1_72_0 }}\boost\include}" >> $GITHUB_ENV
+        echo "{BOOST_ROOT}={$BOOST_ROOT_1_72_0}" >> $GITHUB_ENV
+        echo "{BOOST_INCLUDEDIR}={$BOOST_ROOT_1_72_0\boost\include}" >> $GITHUB_ENV
     
     - name: Create Build Environment
       run: |
