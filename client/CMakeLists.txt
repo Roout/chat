@@ -38,7 +38,7 @@ set(client_targets
   ${This}_lib
 )
 
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
+add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB -D_WIN32_WINNT=0x0601)
 
 foreach(ctarget ${client_targets})
   target_include_directories(${ctarget} 
