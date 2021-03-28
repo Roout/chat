@@ -150,9 +150,7 @@ void Client::OnWrite(
 
         if(m_outbox.GetQueueSize()) {
             // we need to send other data
-            asio::post(m_strand, [self = this->shared_from_this()](){
-                self->Write();
-            });
+            this->Write();
         } 
         else {
             m_isWriting = false;
