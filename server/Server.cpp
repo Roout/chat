@@ -17,7 +17,7 @@ void Server::Start() {
         asio::ip::tcp::acceptor::reuse_address(true)
     );
     m_acceptor.async_accept( *m_socket, [this](const boost::system::error_code& code ) {
-        if( !code ) {
+        if (!code) {
             boost::system::error_code err; 
             this->Write(LogType::info, 
                 "Server accepted connection on endpoint: ", m_socket->remote_endpoint(err), "\n"
@@ -27,7 +27,7 @@ void Server::Start() {
             const auto session { std::make_shared<Session>(std::move(*m_socket), m_service, m_context) };
             session->Subscribe();
             session->Read();
-            if(!m_service->AddSession(session)) {
+            if (!m_service->AddSession(session)) {
                 // TODO: failed to add new session most likely due to connection limit 
             }
             // wait for the new connections again
@@ -37,11 +37,11 @@ void Server::Start() {
 }
 
 void Server::Shutdown() {
-    boost::system::error_code ec;
-    m_acceptor.close(ec);
-    if(ec) {
+    boost::system::error_code error;
+    m_acceptor.close(error);
+    if (error) {
         this->Write(LogType::error, 
-            "Server closed acceptor with error: ", ec.message(), "\n"
+            "Server closed acceptor with error: ", error.message(), "\n"
         );
     }
     m_service->Close();

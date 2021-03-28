@@ -22,7 +22,7 @@ public:
 
     ~Log() {
         std::lock_guard<std::mutex> lock(m_mutex);
-        if(m_os.is_open()) {
+        if (m_os.is_open()) {
             m_os.close();
         }
     }

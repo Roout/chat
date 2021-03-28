@@ -32,7 +32,7 @@ Connection::~Connection() {
 }
 
 void Connection::Publish() {
-    if(auto ptr = m_subscriber.lock()) {
+    if (auto ptr = m_subscriber.lock()) {
         ptr->AcquireRequests();
     }
 }
@@ -42,10 +42,10 @@ void Connection::AddSubscriber(Session* session) {
 }
 
 void Connection::Close() {
-    if(m_state != State::CLOSED) {
+    if (m_state != State::CLOSED) {
         boost::system::error_code ec;
         m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-        if(ec) { 
+        if (ec) { 
             this->AddLog(LogType::error, 
                 "Connection's socket called shutdown with error: "
                 , ec.message()
@@ -54,7 +54,7 @@ void Connection::Close() {
             ec.clear();
         }
         m_socket.close(ec);
-        if(ec) {
+        if (ec) {
             this->AddLog(LogType::error, 
                 "Connection's socket is being closed with error: "
                 , ec.message()
@@ -122,11 +122,11 @@ void Connection::WriteSomeHandler(
     const boost::system::error_code& error, 
     std::size_t transferredBytes
 ) {
-    if(!error) {
+    if (!error) {
         this->AddLog(LogType::info, 
             "Connection sent: ", transferredBytes, " bytes.\n"
         );
-        if(m_outbox.GetQueueSize()) {
+        if (m_outbox.GetQueueSize()) {
             // we need to Write other data
             this->AddLog(LogType::info, 
                 "Connection need to Write ", m_outbox.GetQueueSize(), " messages.\n"
@@ -137,7 +137,7 @@ void Connection::WriteSomeHandler(
             m_state = State::DEFAULT;
         }
     } 
-    else /* if(error == boost::asio::error::eof) */ {
+    else /* if (error == boost::asio::error::eof) */ {
         // Connection was closed by the remote peer 
         // or any other error happened 
         this->AddLog(LogType::error, 
@@ -151,7 +151,7 @@ void Connection::ReadSomeHandler(
     const boost::system::error_code& error, 
     std::size_t transferredBytes
 ) {
-    if(!error) {
+    if (!error) {
         this->AddLog(LogType::info, 
             "Connection just recive: ", transferredBytes, " bytes.\n"
         );

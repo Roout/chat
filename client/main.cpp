@@ -14,7 +14,7 @@ int main() {
 	auto client = std::make_shared<Client>(io);
 	client->Connect("127.0.0.1", 15001);
 	vector<thread> ts;
-	for(int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		ts.emplace_back([io]() {
 			for (;;) {
 				try {
@@ -30,13 +30,13 @@ int main() {
 	
 	cin.ignore();
 
-	while(true) {
+	while (true) {
 		string str;
 		getline(cin, str);
 		client->Write(std::move(str));
 	}
 
-	for(auto& t: ts) {
+	for (auto& t: ts) {
 		t.join();
 	}
 

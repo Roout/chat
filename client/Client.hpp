@@ -39,7 +39,7 @@ public:
      * @param text
      *  Message in string format 
      */
-    void Write(std::string && text );
+    void Write(std::string && text);
 
     /**
      * Check whether a client waiting for acknowledge response or not.

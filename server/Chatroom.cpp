@@ -13,7 +13,7 @@ namespace chat {
         /// Lifetime management
         Impl();
 
-        Impl(const std::string& name );
+        Impl(const std::string& name);
 
     public:
         /// Data members
@@ -65,14 +65,14 @@ namespace chat {
             std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
             isClosed = m_impl->m_users > 0U;
         }
-        if(!isClosed) this->Close();
+        if (!isClosed) this->Close();
     };
 
     void Chatroom::Close() {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
 
-        for(auto& session: m_impl->m_sessions) {
-            if(session) { 
+        for (auto& session: m_impl->m_sessions) {
+            if (session) { 
                 session->Close();
                 session.reset();
             }
@@ -97,12 +97,12 @@ namespace chat {
     bool Chatroom::AddSession(const std::shared_ptr<Session>& session) {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
 
-        if(m_impl->m_users >= Chatroom::Impl::MAX_CONNECTIONS) {
+        if (m_impl->m_users >= Chatroom::Impl::MAX_CONNECTIONS) {
             return false;
         }
 
-        for(auto& s: m_impl->m_sessions) {
-            if(s == nullptr) {
+        for (auto& s: m_impl->m_sessions) {
+            if (s == nullptr) {
                 s = session;
                 m_impl->m_users++;
                 break;
@@ -114,8 +114,8 @@ namespace chat {
     bool Chatroom::RemoveSession(const Session * const session) {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
 
-        for(auto& s: m_impl->m_sessions) {
-            if(s.get() == session) {
+        for (auto& s: m_impl->m_sessions) {
+            if (s.get() == session) {
                 s.reset();
                 m_impl->m_users--;
                 return true;
@@ -126,8 +126,8 @@ namespace chat {
 
     bool Chatroom::Contains(const Session * const session) const noexcept {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
-        for(const auto& s: m_impl->m_sessions) {
-            if(s.get() == session) {
+        for (const auto& s: m_impl->m_sessions) {
+            if (s.get() == session) {
                 return true;
             }
         }
@@ -166,11 +166,11 @@ namespace chat {
 
     void Chatroom::Broadcast(const std::string& text) {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
-        for(auto& session: m_impl->m_sessions) {
-            if(session && session->IsClosed()) {
+        for (auto& session: m_impl->m_sessions) {
+            if (session && session->IsClosed()) {
                 session.reset();
             }
-            else if(session) {
+            else if (session) {
                 session->Write(text);
             }
         }
@@ -181,11 +181,11 @@ namespace chat {
         std::function<bool(const Session&)> predicate
     ) {
         std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
-        for(auto& session: m_impl->m_sessions) {
-            if(session && session->IsClosed()) {
+        for (auto& session: m_impl->m_sessions) {
+            if (session && session->IsClosed()) {
                 session.reset();
             }
-            else if(session && std::invoke(predicate, *session)) {
+            else if (session && std::invoke(predicate, *session)) {
                 session->Write(text);
             }
         }

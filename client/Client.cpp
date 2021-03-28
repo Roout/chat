@@ -19,7 +19,7 @@ Client::Client(std::shared_ptr<asio::io_context> io):
 }
 
 Client::~Client() {
-    if( m_state != State::CLOSED ) {
+    if (m_state != State::CLOSED ) {
         this->Close();
     }
 }
@@ -27,7 +27,7 @@ Client::~Client() {
 void Client::Connect(const std::string& path, std::uint16_t port) {
     asio::ip::tcp::resolver resolver(*m_io);
     const auto endpoints = resolver.resolve(path, std::to_string(port));
-    if( endpoints.empty() ) {
+    if (endpoints.empty()) {
         this->Close();
     }
     else {
@@ -44,7 +44,7 @@ void Client::Write(std::string && text ) {
     // concurrent writing to socket. 
     asio::post(m_strand, [text = std::move(text), self = this->shared_from_this()]() mutable {
         self->m_outbox.Enque(std::move(text));
-        if(!self->m_isWriting) {
+        if (!self->m_isWriting) {
             self->Write();
         } 
     });
@@ -53,7 +53,7 @@ void Client::Write(std::string && text ) {
 void Client::Close() {
     boost::system::error_code error;
     m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, error);
-    if(error) {
+    if (error) {
         m_logger.Write(LogType::error, 
             "Client's socket called shutdown with error: ", error.message(), '\n'
         );
@@ -61,7 +61,7 @@ void Client::Close() {
     }
     
     m_socket.close(error);
-    if(error) {
+    if (error) {
         m_logger.Write(LogType::error, 
             "Client's socket is being closed with error: ", error.message(), '\n'
         );
@@ -70,7 +70,7 @@ void Client::Close() {
 }
 
 void Client::OnConnect(const boost::system::error_code& error) {
-    if(error) {
+    if (error) {
         m_logger.Write(LogType::error, 
             "Client failed to connect with error: ", error.message(), "\n" 
         );
@@ -104,7 +104,7 @@ void Client::OnRead(
     const boost::system::error_code& error, 
     std::size_t transferredBytes
 ) {
-    if(!error) {
+    if (!error) {
         m_logger.Write(LogType::info, 
             "Client just recive: ", transferredBytes, " bytes.\n"
         );
@@ -143,12 +143,12 @@ void Client::OnWrite(
 ) {
     using namespace std::placeholders;
 
-    if(!error) {
+    if (!error) {
         m_logger.Write(LogType::info, 
             "Client just sent: ", transferredBytes, " bytes\n"
         );
 
-        if(m_outbox.GetQueueSize()) {
+        if (m_outbox.GetQueueSize()) {
             // we need to send other data
             this->Write();
         } 
@@ -216,7 +216,7 @@ void Client::HandleMessage(Internal::Response& response) {
             bool hasValidKey { ::Proccess(nullptr, nullptr) };
             // confirm status
             // confirm whether it's our server (proccessing the key)
-            if( isAckQuery && hasValidStatus && hasValidKey) { // it's temporary
+            if (isAckQuery && hasValidStatus && hasValidKey) { // it's temporary
                 m_state = State::RECIEVE_ACK;
                 m_gui.UpdateResponse(std::move(response));
             } 

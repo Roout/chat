@@ -51,8 +51,6 @@ foreach(ctarget ${client_targets})
   )
 endforeach()
 
-# add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
-
 # Expose public includes to other
 # subprojects through cache variable.
 set(${This}_INCLUDE_DIRS 

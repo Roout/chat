@@ -39,10 +39,10 @@ void Session::AcquireRequests() {
     asio::post(*m_context, [self = this->shared_from_this()]() {
         rt::RequestQueue buffer{};
         self->m_incommingRequests->Swap(buffer);
-        while(!buffer.IsEmpty()) {
+        while (!buffer.IsEmpty()) {
             self->HandleRequest(buffer.Extract());
         }
-        if(!self->m_incommingRequests->IsEmpty()) {
+        if (!self->m_incommingRequests->IsEmpty()) {
             self->AcquireRequests();
         }
     });
@@ -72,7 +72,7 @@ void Session::Write(std::string text) {
 }
 
 bool Session::AssignChatroom(std::size_t id) {
-    if(m_service->AssignChatroom(id, this->shared_from_this())) {
+    if (m_service->AssignChatroom(id, this->shared_from_this())) {
         m_user.m_chatroom = id;
         return true;
     }
@@ -88,7 +88,7 @@ void Session::BroadcastOnly(
 
 bool Session::LeaveChatroom() {
     // leave current chatroom if exist
-    if(m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
+    if (m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
         m_service->LeaveChatroom(m_user.m_chatroom, shared_from_this());
         m_user.m_chatroom = chat::Chatroom::NO_ROOM;
         return true;
@@ -108,7 +108,7 @@ std::vector<std::string> Session::GetChatroomList() const noexcept {
 void Session::HandleRequest(Internal::Request&& request) {
     using QueryType = Internal::QueryType;
 
-    switch(request.m_query) {
+    switch (request.m_query) {
         case QueryType::SYN: { 
             CreateExecutor<QueryType::SYN>(&request, this)->Run();
         } break;

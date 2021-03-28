@@ -48,7 +48,7 @@ namespace Internal {
         m_timestamp = doc["timestamp"].GetInt64();
         m_timeout = doc["timeout"].GetUint64();
 
-        if( doc.HasMember("attachment") ) {
+        if (doc.HasMember("attachment")) {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc["attachment"].Accept(writer);
@@ -79,7 +79,7 @@ namespace Internal {
         doc.Accept(writer);
 
         json = std::string(buffer.GetString(), buffer.GetSize());
-        if( !m_attachment.empty() ) {
+        if (!m_attachment.empty()) {
             json.pop_back(); // remove '}'
             json += ",\"attachment\":";
             json += m_attachment;
@@ -96,13 +96,14 @@ namespace Internal {
         m_timestamp = doc["timestamp"].GetInt64();
         m_status = doc["status"].GetInt();
         
-        if(doc.HasMember("error")) {
+        if (doc.HasMember("error")) {
             m_error = doc["error"].GetString();
-        } else {
+        } 
+        else {
             m_error.clear();
         }
         
-        if( doc.HasMember("attachment") ) {
+        if (doc.HasMember("attachment")) {
             rapidjson::StringBuffer buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
             doc["attachment"].Accept(writer);
@@ -127,7 +128,7 @@ namespace Internal {
         value.SetInt(m_status);
         doc.AddMember("status", value, alloc);
 
-        if( !m_error.empty() ) {
+        if (!m_error.empty()) {
             value.SetString(m_error.c_str(), alloc);
             doc.AddMember("error", value, alloc);
         }
@@ -138,7 +139,7 @@ namespace Internal {
         doc.Accept(writer);
 
         json = std::string(buffer.GetString(), buffer.GetSize());
-        if( !m_attachment.empty() ) {
+        if (!m_attachment.empty()) {
             json.pop_back(); // remove '}'
             json += ",\"attachment\":";
             json += m_attachment;

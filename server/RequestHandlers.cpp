@@ -27,7 +27,7 @@ namespace RequestHandlers {
     {}
 
     void Executor::Run() {
-        if(this->IsValidRequest()) {
+        if (this->IsValidRequest()) {
             this->ExecuteRequest();
         }
         this->SendResponse();
@@ -46,7 +46,7 @@ namespace RequestHandlers {
     bool Sync::IsValidRequest() {
         /// TODO: check incoming key
         m_reply.m_query = QueryType::ACK;
-        if(m_service->IsWaitingSyn()) {
+        if (m_service->IsWaitingSyn()) {
             m_reply.m_status = 200;
         }
         else {
@@ -77,7 +77,7 @@ namespace RequestHandlers {
         m_reply.m_query = QueryType::LEAVE_CHATROOM;
         // - only acknowledged client can join/leave the room
         // TODO: - must be in chatroom
-        if(m_service->IsAcknowleged()) {
+        if (m_service->IsAcknowleged()) {
             m_reply.m_status = 200;
         }
         else {
@@ -89,7 +89,7 @@ namespace RequestHandlers {
 
     void LeaveChatroom::ExecuteRequest() {
         const auto leftRoom = m_service->LeaveChatroom();
-        if(leftRoom == chat::Chatroom::NO_ROOM) {
+        if (leftRoom == chat::Chatroom::NO_ROOM) {
             m_reply.m_status = 424;  // Failed Dependency
             m_reply.m_error = "Must belong to chatroom";
         }
@@ -99,11 +99,11 @@ namespace RequestHandlers {
         /// TODO: update
         m_reply.m_query = QueryType::JOIN_CHATROOM;
 
-        if(m_service->IsAcknowleged() == false) {
+        if (m_service->IsAcknowleged() == false) {
             m_reply.m_status = 424; // Failed Dependency
             m_reply.m_error = "Require acknowledgement";
         }
-        else if(m_service->GetUser().m_chatroom == chat::Chatroom::NO_ROOM) {
+        else if (m_service->GetUser().m_chatroom == chat::Chatroom::NO_ROOM) {
             // is in hall
             m_reply.m_status = 200;
         }
@@ -120,7 +120,7 @@ namespace RequestHandlers {
         reader.Parse(m_request->m_attachment.c_str());
         const auto roomId = reader["chatroom"]["id"].GetUint64();
 
-        if(m_service->AssignChatroom(roomId)) {
+        if (m_service->AssignChatroom(roomId)) {
             m_service->UpdateUsername(reader["user"]["name"].GetString());
         }
         else {
@@ -132,11 +132,11 @@ namespace RequestHandlers {
     bool CreateChatroom::IsValidRequest() {
         m_reply.m_query = QueryType::CREATE_CHATROOM;
         
-        if(m_service->IsAcknowleged() == false) {
+        if (m_service->IsAcknowleged() == false) {
             m_reply.m_status = 424; // Failed Dependency
             m_reply.m_error = "Require acknowledgement";
         }
-        else if(m_service->GetUser().m_chatroom == chat::Chatroom::NO_ROOM) {
+        else if (m_service->GetUser().m_chatroom == chat::Chatroom::NO_ROOM) {
             // is in hall
             m_reply.m_status = 200;
         }
@@ -156,7 +156,7 @@ namespace RequestHandlers {
 
         const std::string roomName = doc["chatroom"]["name"].GetString();
         const auto roomId = m_service->CreateChatroom(roomName); 
-        if(m_service->AssignChatroom(roomId)) {
+        if (m_service->AssignChatroom(roomId)) {
             m_service->UpdateUsername(doc["user"]["name"].GetString());
 
             rapidjson::Value value(rapidjson::kObjectType);
@@ -173,7 +173,7 @@ namespace RequestHandlers {
     bool ListChatroom::IsValidRequest() {
         m_reply.m_query = QueryType::LIST_CHATROOM;
 
-        if(m_service->IsAcknowleged()) {
+        if (m_service->IsAcknowleged()) {
             m_reply.m_status = 200;
         }
         else {
@@ -191,7 +191,7 @@ namespace RequestHandlers {
             m_reply.m_attachment += std::move(obj);
             m_reply.m_attachment += ",";
         }
-        if(!list.empty()) {
+        if (!list.empty()) {
             m_reply.m_attachment.pop_back();
         }
         m_reply.m_attachment += "]}";
@@ -201,11 +201,11 @@ namespace RequestHandlers {
     bool ChatMessage::IsValidRequest() {
         m_reply.m_query = QueryType::CHAT_MESSAGE;
         
-        if(m_service->IsAcknowleged() == false) {
+        if (m_service->IsAcknowleged() == false) {
             m_reply.m_status = 424; // Failed Dependency
             m_reply.m_error = "Require acknowledgement";
         }
-        else if(m_service->GetUser().m_chatroom != chat::Chatroom::NO_ROOM) {
+        else if (m_service->GetUser().m_chatroom != chat::Chatroom::NO_ROOM) {
             m_reply.m_status = 200;
         }
         else {

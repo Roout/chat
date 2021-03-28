@@ -12,11 +12,11 @@ RoomService::RoomService() :
 
 void RoomService::Close() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    for(auto& [id, room]: m_chatrooms) {
+    for (auto& [id, room]: m_chatrooms) {
         room->Close();
     }
     m_chatrooms.clear();
-    if(!m_hall->IsEmpty()) {
+    if (!m_hall->IsEmpty()) {
         m_hall->Close();
     }
 }
@@ -32,7 +32,7 @@ bool RoomService::AddSession(const std::shared_ptr<Session>& session) noexcept {
 bool RoomService::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
     // Remove session from the hall
     const auto isRemoved = m_hall->RemoveSession(session.get());
-    if(!isRemoved) {
+    if (!isRemoved) {
         // TODO: can't find session in chatroom for unAuth
     }
 
@@ -41,13 +41,13 @@ bool RoomService::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<S
         std::lock_guard<std::mutex> lock(m_mutex);
         // Find chatroom with required id
         // If chatroom is found then try to assign session to chatroom
-        if( const auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end() ) {
+        if (const auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
             room = it->second;
         }
     } // Pointer to chatroom was aquired so release mutex
 
     // if chatroom was assigned successfully return true otherwise false
-    if(room && room->AddSession(session) ) {
+    if (room && room->AddSession(session)) {
         return true;
     } 
     else { // failed to join chatroom or room doens't exist
@@ -67,7 +67,7 @@ void RoomService::BroadcastOnly(
     std::shared_ptr<Chatroom> room { nullptr };
     { // block until the room was found
         std::lock_guard<std::mutex> lock{ m_mutex };
-        if( auto it = m_chatrooms.find(id); it != m_chatrooms.end() ) {
+        if (auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
             room = it->second;
         }
     } // release mutex
@@ -76,20 +76,20 @@ void RoomService::BroadcastOnly(
 
 void RoomService::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
     // Check whether it's a hall chatroom
-    if( chatroomId == m_hall->GetId()) {
+    if (chatroomId == m_hall->GetId()) {
         /// TODO: user can't leave hall!
         return;
     }     
     std::shared_ptr<Chatroom> room{ nullptr };
     { // Block
         std::lock_guard<std::mutex> lock{ m_mutex };
-        if( auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end() ) {
+        if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
             room = it->second;
         }
     } // Release
 
-    if( room && room->RemoveSession(session.get()) ) {
-        if( room->IsEmpty() ) {
+    if (room && room->RemoveSession(session.get())) {
+        if (room->IsEmpty()) {
             this->RemoveChatroom(chatroomId);
         } 
         (void) m_hall->AddSession(session);
@@ -101,7 +101,7 @@ std::vector<std::string> RoomService::GetChatroomList() const noexcept {
     list.reserve(m_chatrooms.size());
 
     std::unique_lock<std::mutex> lock(m_mutex, std::try_to_lock);
-    for(const auto& [id, chatroom] : m_chatrooms) {
+    for (const auto& [id, chatroom] : m_chatrooms) {
         list.emplace_back(chatroom->AsJSON());
     }
     lock.unlock();
@@ -120,14 +120,14 @@ std::size_t RoomService::CreateChatroom(std::string name) {
 
 std::size_t RoomService::GetChatroom(const Session* const session) const noexcept {
     // check the hall
-    if(m_hall->Contains(session)) {
+    if (m_hall->Contains(session)) {
         return m_hall->GetId();
     }
     // check user's chatrooms
     { // Blocks
         std::lock_guard<std::mutex> lock{ m_mutex };
-        for(const auto& [id, room]: m_chatrooms) {
-            if(room->Contains(session)) {
+        for (const auto& [id, room]: m_chatrooms) {
+            if (room->Contains(session)) {
                 return id;
             }
         }
@@ -144,12 +144,12 @@ void RoomService::RemoveChatroom(std::size_t chatroomId) {
     std::shared_ptr<Chatroom> room { nullptr };
     { // Block
         std::lock_guard<std::mutex> lock{ m_mutex };  
-        if(auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end() ) {
+        if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
             room = it->second;
             m_chatrooms.erase(it);
         }
     } // Release
-    if(room) {
+    if (room) {
         room->Close();
     }
 }

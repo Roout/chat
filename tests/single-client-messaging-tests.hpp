@@ -46,7 +46,7 @@ protected:
         m_client = std::make_shared<Client> (m_context);
         m_client->Connect("127.0.0.1", 15001);
 
-        for(int i = 0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             m_threads.emplace_back([io = m_context]() {
                 for (;;) {
                     try {
@@ -64,8 +64,8 @@ protected:
     void TearDown() override {
         m_server->Shutdown();
         m_context->stop();
-        for(auto& t: m_threads) {
-            if(t.joinable()) {
+        for (auto& t: m_threads) {
+            if (t.joinable()) {
                 t.join();
             }
         }
@@ -180,7 +180,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     EXPECT_EQ(chatrooms.Size(), expectedRooms.size());
     std::array<MockChatroom, 2> recievedRooms;
     std::size_t i { 0 };
-    for(const auto& roomObj: chatrooms) {
+    for (const auto& roomObj: chatrooms) {
         recievedRooms[i].id = roomObj["id"].GetUint64(); 
         recievedRooms[i].name = roomObj["name"].GetString();
         recievedRooms[i].users = roomObj["users"].GetUint64(); 
@@ -188,7 +188,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     }
     /// 4. Compare expected result and received response
     EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::LIST_CHATROOM);
-    for(std::size_t i = 0; i < expectedRooms.size(); i++) {
+    for (std::size_t i = 0; i < expectedRooms.size(); i++) {
         EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
     }
 }
@@ -267,10 +267,10 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     const std::regex rx { ".+\"id\":[ ]*(\\d+).+\"name\":[ ]*\"(.*)\".+\"users\":[ ]*(\\d+).*" };
     std::smatch match;
     auto foundMatchRoom { false };
-    for(const auto& room: currentChatroomList) {
+    for (const auto& room: currentChatroomList) {
         EXPECT_TRUE(std::regex_match(room, match, rx));
 
-        if(std::stoi(match[1].str()) == id) {
+        if (std::stoi(match[1].str()) == id) {
             EXPECT_FALSE(foundMatchRoom) << "Room with ID = " << id << " already exist.";
             foundMatchRoom = true;
             EXPECT_EQ(desiredChatroomName, match[2].str());
