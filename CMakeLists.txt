@@ -31,4 +31,5 @@ add_subdirectory(
 add_subdirectory(common)
 add_subdirectory(client)
 add_subdirectory(server)
+add_subdirectory(mock_stream)
 add_subdirectory(tests)
