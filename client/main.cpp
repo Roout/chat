@@ -1,9 +1,11 @@
 #include <iostream>
 #include <memory>
-#include <boost/asio.hpp>
 #include <thread>
 #include <vector>
+#include <boost/asio.hpp>
+
 #include "Client.hpp"
+
 using namespace std;
 
 int main() {
@@ -12,7 +14,7 @@ int main() {
 	};
 	
 	auto client = std::make_shared<Client>(io);
-	client->Connect("127.0.0.1", 15001);
+	client->Connect("127.0.0.1", "15001");
 	vector<thread> ts;
 	for (int i = 0; i < 2; i++) {
 		ts.emplace_back([io]() {

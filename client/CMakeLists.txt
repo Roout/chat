@@ -8,7 +8,7 @@ set(sources)
 
 list(APPEND headers
   "Client.hpp"
-  "GUI.hpp"
+  "Connection.hpp"
 )
 
 list(APPEND sources 
