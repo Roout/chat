@@ -40,13 +40,13 @@ protected:
         m_timer = std::make_shared<boost::asio::deadline_timer>(*m_context);
 
         // Create server and start accepting connections
-        m_server = std::make_unique<Server> (m_context, 15001);
+        m_server = std::make_unique<Server>(m_context, 15001);
         m_server->Start();
         // Create client and connect to server
-        m_client = std::make_shared<Client> (m_context);
-        m_client->Connect("127.0.0.1", 15001);
+        m_client = std::make_shared<Client>(m_context);
+        m_client->Connect("127.0.0.1", "15001");
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 4; i++) {
             m_threads.emplace_back([io = m_context]() {
                 for (;;) {
                     try {
@@ -83,8 +83,8 @@ protected:
         // blocks
         this->WaitFor(m_waitTimeout);
         // test
-        ASSERT_TRUE(m_client->IsAcknowleged()) << "Client hasn't been acknowleged";
-        EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::ACK);
+        ASSERT_TRUE(m_client->GetState() == Client::State::RECEIVE_ACK) << "Client hasn't been acknowleged";
+        EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::ACK);
     }
 
     /**
@@ -171,7 +171,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     this->WaitFor(listRequest.m_timeout);
 
     /// 3. build a chatroom list
-    const auto& jsonString = m_client->GetGUI().GetResponse().m_attachment;
+    const auto& jsonString = m_client->GetLastResponse().m_attachment;
 
     rapidjson::Document reader;
     reader.Parse(jsonString.c_str());
@@ -187,7 +187,7 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
         i++;
     }
     /// 4. Compare expected result and received response
-    EXPECT_EQ(m_client->GetGUI().GetResponse().m_query, Internal::QueryType::LIST_CHATROOM);
+    EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::LIST_CHATROOM);
     for (std::size_t i = 0; i < expectedRooms.size(); i++) {
         EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
     }
@@ -208,7 +208,7 @@ TEST_F(BasicInteractionTest, JoinChatroomRequest) {
     this->JoinChatroom(desiredId, "random user name", *m_client);
 
     // #3 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetResponse();
+    const auto joinReply = m_client->GetLastResponse();
 
     EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
@@ -249,7 +249,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     this->WaitFor(request.m_timeout);
 
     // #3 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetResponse();
+    auto joinReply = m_client->GetLastResponse();
 
     EXPECT_EQ(joinReply.m_query, Internal::QueryType::CREATE_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
@@ -296,7 +296,7 @@ TEST_F(BasicInteractionTest, LeaveChatroomRequest) {
     this->JoinChatroom(desiredId, "random user name", *m_client);
 
     // #3 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetResponse();
+    const auto joinReply = m_client->GetLastResponse();
 
     EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
@@ -343,7 +343,7 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     this->JoinChatroom(desiredId, "user #1", *m_client);
 
     // #3 Confirm that we've joined
-    const auto& joinReply = m_client->GetGUI().GetResponse();
+    const auto joinReply = m_client->GetLastResponse();
 
     EXPECT_EQ(joinReply.m_query, Internal::QueryType::JOIN_CHATROOM);
     EXPECT_EQ(joinReply.m_status, 200);
@@ -351,7 +351,7 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
 
     // #4 Add another client to the chatroom
     auto client = std::make_shared<Client>(m_context);
-    client->Connect("127.0.0.1", 15001);
+    client->Connect("127.0.0.1", "15001");
     this->JoinChatroom(desiredId, "user #2", *client);
 
     // #5 Build chat request
@@ -369,13 +369,13 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     this->WaitFor(chat.m_timeout);
 
     // #6 Confirm response to the sender
-    const auto& chatReply = m_client->GetGUI().GetResponse();
+    const auto chatReply = m_client->GetLastResponse();
     EXPECT_EQ(chatReply.m_query, Internal::QueryType::CHAT_MESSAGE);
     EXPECT_EQ(chatReply.m_status, 200);
     EXPECT_TRUE(chatReply.m_attachment.empty());
 
     // #7 Confirm response to broadcast
-    const auto& incoming = client->GetGUI().GetResponse();
+    const auto incoming = client->GetLastResponse();
     EXPECT_EQ(incoming.m_query, Internal::QueryType::CHAT_MESSAGE);
     EXPECT_EQ(incoming.m_status, 200);
     EXPECT_FALSE(incoming.m_attachment.empty());

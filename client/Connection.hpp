@@ -249,7 +249,7 @@ void Connection<Stream>::OnRead(
 
         if(auto model = m_client.lock(); model) {
             /* if it's ACK, we resolve the State in synchronous way, otherwise resolve asyncronously */
-            model->HandleMessage(incomingResponse);
+            model->HandleMessage(std::move(incomingResponse));
         }
         this->Read();
     } 
@@ -281,15 +281,16 @@ void Connection<Stream>::OnWrite(
     }
 } 
 
+
 template<class Stream>
 void Connection<Stream>::Synchronize() {
-    std::string serialized{};
-    // Internal::Request request = CreateSynchronizeRequest();
-    // request.Write(serialized);
     if(auto model = m_client.lock(); model) {
+        std::string serialized{};
+        Internal::Request request = model->CreateSynchronizeRequest();
+        request.Write(serialized);
         model->SetState(Client::State::WAIT_ACK);
+        this->Write(std::move(serialized));
     }
-    this->Write(std::move(serialized));
 }
 
 } // namespace client

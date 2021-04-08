@@ -76,7 +76,9 @@ public:
 
     void CloseConnection();
 
-    void HandleMessage(Internal::Response&);
+    void HandleMessage(Internal::Response&&);
+
+    Internal::Request CreateSynchronizeRequest() const;
     
     /**
      * Write message to the remote peer
@@ -89,10 +91,14 @@ public:
 
     State GetState() const noexcept;
 
+    Internal::Response GetLastResponse() const noexcept;
+
 private:
     std::shared_ptr<boost::asio::io_context> m_io { nullptr };
     std::shared_ptr<client::Connection_t> m_connection { nullptr };
 
+    // TODO: move to some other intermediate type between client and GUI
+    Internal::Response m_response;
     // TODO: maybe use atomic
     State m_state { State::CLOSED };
     mutable std::mutex m_mutex;
