@@ -60,12 +60,12 @@ namespace chat {
     Chatroom & Chatroom::operator=(Chatroom&&rhs) = default;
 
     Chatroom::~Chatroom() {
-        bool isClosed { false };
+        bool hasUsers { false };
         {
             std::lock_guard<std::mutex> lock{ m_impl->m_mutex };
-            isClosed = m_impl->m_users > 0U;
+            hasUsers = m_impl->m_users > 0U;
         }
-        if (!isClosed) this->Close();
+        if (!hasUsers) this->Close();
     };
 
     void Chatroom::Close() {
