@@ -28,12 +28,27 @@ Session::Session(
 
 void Session::Close() {
     m_connection->Close();
+    // m_connection.reset();
+}
+
+void Session::Subscribe() {
+    // Subscribe on connection
+    m_connection->AddSubscriber(this->weak_from_this());
 }
 
 /**
  * 1. Acquire all data from the extern queue (move it to our queue)
  * 2. Handle requests one by one from the own queue
  * 3. If extern queue is not empty -> go to step 1; otherwise stop
+ * 
+ * NOTE: Queue can have more than 1 job(request) to proccess in case:
+ * - connection read first  request -> call `AcquireRequests` which sends handler for execution
+ * - connection read second request -> call `AcquireRequests` which sends handler for execution
+ * - only now `AcquireRequests` is being executed!
+ * As the result, there are 2 requests already in the queue to be proccessed!
+ * 
+ * NOTE: `AcquireRequests` is NOT being posted through the `strand` of the Connection so this handler
+ * can be executed at the same time with handlers called from the Connection.
  */
 void Session::AcquireRequests() {
     asio::post(*m_context, [self = this->shared_from_this()]() {
@@ -46,10 +61,6 @@ void Session::AcquireRequests() {
             self->AcquireRequests();
         }
     });
-}
-
-void Session::Subscribe() {
-    m_connection->AddSubscriber(this);
 }
 
 void Session::Read() {

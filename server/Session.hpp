@@ -37,7 +37,9 @@ public:
     );
 
     ~Session() {
-        this->Close();
+        if (m_connection != nullptr) {
+            this->Close();
+        }
     };
 
     /**
@@ -45,6 +47,9 @@ public:
      */
     void Read();
 
+    /**
+     * queue text for writing through connection
+     */
     void Write(std::string text);
 
     /**
@@ -52,9 +57,14 @@ public:
      */
     void Close();
 
-    void AcquireRequests();
-
     void Subscribe();
+
+    /**
+     * Initiate a handler which
+     * acquire all already existing in queue requests
+     * and proccessed them one by one
+     */
+    void AcquireRequests();
 
     const Internal::User& GetUser() const noexcept {
         return m_user;
@@ -135,7 +145,7 @@ private:
 
     std::shared_ptr<net::Connection> m_connection { nullptr };
 
-    State m_state { State:: CLOSED };
+    State m_state { State::CLOSED };
 
     /**
      * Time in milliseconds the session is ready to wait for the SYN request 
