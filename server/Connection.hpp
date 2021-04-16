@@ -34,7 +34,7 @@ public:
 
     ~Connection();
 
-    void AddSubscriber(Session* session);
+    void AddSubscriber(std::weak_ptr<Session> session);
 
     /**
      * Read with timeout

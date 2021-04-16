@@ -28,41 +28,43 @@ Connection::Connection(
 }
 
 Connection::~Connection() {
-    this->Close();
+    if (m_state != State::CLOSED) {
+        this->Close();
+    }
 }
 
 void Connection::Publish() {
-    if (auto ptr = m_subscriber.lock()) {
+    if (auto ptr = m_subscriber.lock(); ptr) {
         ptr->AcquireRequests();
     }
 }
 
-void Connection::AddSubscriber(Session* session) {
-    m_subscriber = session->weak_from_this();
+void Connection::AddSubscriber(std::weak_ptr<Session> session) {
+    m_subscriber = session;
 }
 
 void Connection::Close() {
-    if (m_state != State::CLOSED) {
-        boost::system::error_code ec;
-        m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec) { 
-            this->AddLog(LogType::error, 
-                "Connection's socket called shutdown with error: "
-                , ec.message()
-                , '\n'
-            );
-            ec.clear();
+    boost::asio::post(m_strand, [self = this->shared_from_this()]() {
+        if (self->m_state != State::CLOSED) {
+            boost::system::error_code error;
+            self->m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, error);
+            if (error) { 
+                self->AddLog(LogType::error, 
+                    "Connection's socket called shutdown with error:"
+                    , error.message(), '\n'
+                );
+                error.clear();
+            }
+            self->m_socket.close(error);
+            if (error) {
+                self->AddLog(LogType::error, 
+                    "Connection's socket is being closed with error:"
+                    , error.message(), '\n'
+                );
+            } 
+            self->m_state = State::CLOSED;
         }
-        m_socket.close(ec);
-        if (ec) {
-            this->AddLog(LogType::error, 
-                "Connection's socket is being closed with error: "
-                , ec.message()
-                , '\n'
-            );
-        } 
-        m_state = State::CLOSED;
-    }
+    });
 }
 
 void Connection::Read(std::size_t ms, TimerCallback&& callback) {
@@ -124,12 +126,12 @@ void Connection::WriteSomeHandler(
 ) {
     if (!error) {
         this->AddLog(LogType::info, 
-            "Connection sent: ", transferredBytes, " bytes.\n"
+            "Connection sent:", transferredBytes, "bytes.\n"
         );
         if (m_outbox.GetQueueSize()) {
             // we need to Write other data
             this->AddLog(LogType::info, 
-                "Connection need to Write ", m_outbox.GetQueueSize(), " messages.\n"
+                "Connection need to Write", m_outbox.GetQueueSize(), "messages.\n"
             );
             this->Write();
         } 
@@ -141,7 +143,7 @@ void Connection::WriteSomeHandler(
         // Connection was closed by the remote peer 
         // or any other error happened 
         this->AddLog(LogType::error, 
-            "Connection has error trying to write: ", error.message(), '\n'
+            "Connection has error trying to write:", error.message(), '\n'
         );
         this->Close();
     }
@@ -153,7 +155,7 @@ void Connection::ReadSomeHandler(
 ) {
     if (!error) {
         this->AddLog(LogType::info, 
-            "Connection just recive: ", transferredBytes, " bytes.\n"
+            "Connection just recive:", transferredBytes, "bytes.\n"
         );
         const auto data { m_inbox.data() };
         std::string received {
@@ -164,22 +166,19 @@ void Connection::ReadSomeHandler(
         
         boost::system::error_code ec; 
         this->AddLog(LogType::info, 
-            m_socket.remote_endpoint(ec), ": ", received, '\n'
+            m_socket.remote_endpoint(ec), ':', received, '\n'
         );
 
         // Handle exceptions
         Internal::Request request{};
         request.Read(received);
-        // TODO: it can be added via `asio::post` and return immediatly
-        // or not read the socket until request will be pushed to the queue
-        // (as queue is shared resource it can be blocked)
         m_incommingRequests->Push(std::move(request));
         this->Publish();
         this->Read();
     } 
     else {
         this->AddLog(LogType::error, 
-            "Connection trying to read invoked error: ", error.message(), '\n'
+            "Connection trying to read invoked error:", error.message(), '\n'
         );
     }
 }
