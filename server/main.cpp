@@ -2,9 +2,9 @@
 #include <memory>
 #include <boost/asio.hpp>
 #include <thread>
+#include <exception>
 #include <vector>
 #include "Server.hpp"
-using namespace std;
 
 int main() {
 	std::shared_ptr<boost::asio::io_context> io { 
@@ -13,16 +13,16 @@ int main() {
 
 	Server server { io, 15001 };
 	server.Start();
-	vector<thread> ts;
-	for (int i = 0; i < 2; i++) {
+	std::vector<std::thread> ts;
+	for (int i = 0; i < 4; i++) {
 		ts.emplace_back([io]() {
 			for (;;) {
 				try {
 					io->run();
 					break; // run() exited normally
 				}
-				catch (...) {
-					// Deal with exception as appropriate.
+				catch (const std::exception& e) {
+					std::cerr << "ERROR: " << e.what() << '\n';
 				}
 			}
 		});
