@@ -16,11 +16,11 @@ void Server::Start() {
         // C++ exception with description "bind: Address already in use"
         asio::ip::tcp::acceptor::reuse_address(true)
     );
-    m_acceptor.async_accept( *m_socket, [this](const boost::system::error_code& code ) {
+    m_acceptor.async_accept(*m_socket, [this](const boost::system::error_code& code) {
         if (!code) {
             boost::system::error_code err; 
             this->Write(LogType::info, 
-                "Server accepted connection on endpoint: ", m_socket->remote_endpoint(err), "\n"
+                "Server accepted connection on endpoint:", m_socket->remote_endpoint(err), '\n'
             ); 
             // Session won't live more than room service cuz service was destroyed or closed
             // when all sessions had been closed.
@@ -41,7 +41,7 @@ void Server::Shutdown() {
     m_acceptor.close(error);
     if (error) {
         this->Write(LogType::error, 
-            "Server closed acceptor with error: ", error.message(), "\n"
+            "Server closed acceptor with error:", error.message(), '\n'
         );
     }
     m_service->Close();
