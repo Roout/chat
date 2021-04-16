@@ -2,8 +2,8 @@
 #define SERVER_HPP
 
 #include <memory>   // std::shared_ptr
-#include <string>   
 #include <optional>
+#include <cstdint>
 
 #include <boost/asio.hpp>
 
