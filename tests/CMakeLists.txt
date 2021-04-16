@@ -32,7 +32,7 @@ target_include_directories(${This}
   PUBLIC ${CLIENT_DIR}
 )
 
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB)
+add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB -D_WIN32_WINNT=0x0601)
 
 target_link_libraries(${This} PUBLIC
   gtest_main
