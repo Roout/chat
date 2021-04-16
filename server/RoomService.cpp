@@ -1,6 +1,7 @@
 #include "RoomService.hpp"
-
 #include "Session.hpp"
+
+#include <cassert>
 
 namespace chat {
 
@@ -36,25 +37,24 @@ bool RoomService::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<S
         // TODO: can't find session in chatroom for unAuth
     }
 
-    std::shared_ptr<Chatroom> room { nullptr };
-    { // Block while looking for the desired chatroom
+    { // Block
         std::lock_guard<std::mutex> lock(m_mutex);
         // Find chatroom with required id
         // If chatroom is found then try to assign session to chatroom
         if (const auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
-            room = it->second;
+            auto room = it->second;
+            // if chatroom was assigned successfully return true otherwise false
+            assert(room && "Room can be nullptr");
+            if (room->AddSession(session)) {
+                return true;
+            } 
         }
-    } // Pointer to chatroom was aquired so release mutex
+    } // Release
 
-    // if chatroom was assigned successfully return true otherwise false
-    if (room && room->AddSession(session)) {
-        return true;
-    } 
-    else { // failed to join chatroom or room doens't exist
-        // assign session back to hall
-        (void) m_hall->AddSession(session);
-        return false;
-    }
+    // failed to join chatroom or room doens't exist
+    // assign session back to hall
+    (void) m_hall->AddSession(session);
+    return false;
 }
 
 void RoomService::BroadcastOnly(
@@ -64,14 +64,12 @@ void RoomService::BroadcastOnly(
 ) {
     const auto id = source->GetUser().m_chatroom;
 
-    std::shared_ptr<Chatroom> room { nullptr };
-    { // block until the room was found
-        std::lock_guard<std::mutex> lock{ m_mutex };
-        if (auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
-            room = it->second;
-        }
-    } // release mutex
-    room->Broadcast(message, condition);
+    std::lock_guard<std::mutex> lock{ m_mutex };
+    if (auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
+        auto room = it->second;
+        assert(room && "Room can be nullptr");
+        room->Broadcast(message, condition);
+    }
 }
 
 void RoomService::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
@@ -85,11 +83,13 @@ void RoomService::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Se
         std::lock_guard<std::mutex> lock{ m_mutex };
         if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
             room = it->second;
+            assert(room && "Room can be nullptr");
         }
     } // Release
 
     if (room && room->RemoveSession(session.get())) {
-        if (room->IsEmpty()) {
+        if (std::lock_guard<std::mutex> lock{ m_mutex }; room->IsEmpty()) {
+            // FIXME: what if new room will be added at this moment?
             this->RemoveChatroom(chatroomId);
         } 
         (void) m_hall->AddSession(session);
@@ -141,15 +141,9 @@ bool RoomService::ExistChatroom(std::size_t id) const noexcept {
 }
 
 void RoomService::RemoveChatroom(std::size_t chatroomId) {
-    std::shared_ptr<Chatroom> room { nullptr };
-    { // Block
-        std::lock_guard<std::mutex> lock{ m_mutex };  
-        if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
-            room = it->second;
-            m_chatrooms.erase(it);
-        }
-    } // Release
-    if (room) {
+    if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
+        auto room = it->second;
+        m_chatrooms.erase(it);
         room->Close();
     }
 }

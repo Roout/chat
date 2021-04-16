@@ -53,14 +53,9 @@ public:
     auto GetChatroomData(std::size_t id) const noexcept 
         -> std::optional<std::tuple<std::size_t, std::size_t, std::string>>
     {
-        std::shared_ptr<Chatroom> room { nullptr };
-        { // Block
-            std::lock_guard<std::mutex> lock (m_mutex);
-            if(auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
-                room = it->second;
-            }
-        } // Release
-        if(room) {
+        std::lock_guard<std::mutex> lock (m_mutex);
+        if(auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
+            auto room = it->second;
             auto tuple = std::make_tuple(
                 room->GetId(), 
                 room->GetSessionCount(), 
@@ -166,7 +161,7 @@ public:
      * @return 
      *  The indication whether the room with the given ID empty or not.
      * @note
-     *  Thread-safety: NOT-safe
+     *  Thread-safety: safe
      */
     bool IsEmpty(std::size_t chatroomId) const noexcept;
 
