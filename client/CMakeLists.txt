@@ -17,9 +17,17 @@ list(APPEND sources
 )
 
 find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # debug message
 message(STATUS "Client debug message: ")
+if(${OPENSSL_FOUND})
+  message(STATUS "OPENSSL_FOUND is true")
+  message(STATUS "OPENSSL_VERSION ${OPENSSL_VERSION}")
+else()
+  message(STATUS "OPENSSL_FOUND is false")
+endif()
+
 if(${Threads_FOUND})
   message(STATUS "Threads_FOUND is true")
   message(STATUS "CMAKE_THREAD_LIBS_INIT is ${CMAKE_THREAD_LIBS_INIT}")
@@ -38,16 +46,23 @@ set(client_targets
   ${This}_lib
 )
 
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB -D_WIN32_WINNT=0x0601)
+add_definitions(
+  -DBOOST_DATE_TIME_NO_LIB 
+  -DBOOST_REGEX_NO_LIB 
+  -D_WIN32_WINNT=0x0601
+)
 
 foreach(ctarget ${client_targets})
   target_include_directories(${ctarget} 
     PRIVATE ${RAPIDJSON_INCLUDE_DIR}
     PRIVATE ${common_INCLUDE_DIRS}
+    PRIVATE ${OPENSSL_INCLUDE_DIR}
   )
   target_link_libraries(${ctarget}
     PRIVATE common
     PRIVATE ${CMAKE_THREAD_LIBS_INIT}
+    PRIVATE OpenSSL::SSL
+    PRIVATE OpenSSL::Crypto
   )
 endforeach()
 
