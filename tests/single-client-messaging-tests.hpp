@@ -21,6 +21,9 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
+#include <boost/asio/ssl.hpp>
+#include <boost/asio.hpp>
+
 /// Helper functions:
 
 template<class Encoding, class Allocator>
@@ -37,13 +40,14 @@ protected:
 
     void SetUp() override {
         m_context = std::make_shared<boost::asio::io_context>();
+        m_sslContext = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
         m_timer = std::make_shared<boost::asio::deadline_timer>(*m_context);
 
         // Create server and start accepting connections
         m_server = std::make_unique<Server>(m_context, 15001);
         m_server->Start();
         // Create client and connect to server
-        m_client = std::make_shared<Client>(m_context);
+        m_client = std::make_shared<Client>(m_context, m_sslContext);
         m_client->Connect("127.0.0.1", "15001");
 
         for (int i = 0; i < 4; i++) {
@@ -71,7 +75,7 @@ protected:
         }
     }   
 
-    void WaitFor(std::size_t ms) {
+    void WaitFor(std::uint64_t ms) {
         m_timer->expires_from_now(boost::posix_time::millisec(ms));
         m_timer->wait();
     }
@@ -97,7 +101,7 @@ protected:
      * @param client
      *  A client wished to join a chatroom
      */
-    void JoinChatroom(std::size_t id, const std::string& username, Client& client) {
+    void JoinChatroom(std::uint64_t id, const std::string& username, Client& client) {
         Internal::Request request{};
         request.m_query = Internal::QueryType::JOIN_CHATROOM;
         request.m_timeout = m_waitTimeout;
@@ -119,12 +123,13 @@ protected:
     }
 
 protected:
+    std::shared_ptr<boost::asio::io_context> m_context {};
+    std::shared_ptr<boost::asio::ssl::context> m_sslContext {};
     std::unique_ptr<Server> m_server {};
     std::shared_ptr<Client> m_client {};
-    std::shared_ptr<boost::asio::io_context> m_context {};
     std::vector<std::thread> m_threads {};
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
-    const std::size_t m_waitTimeout { 128 };
+    const std::uint64_t m_waitTimeout { 128 };
 };
 
 /**
@@ -145,8 +150,8 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 1. Server creates chatrooms
     struct MockChatroom {
         std::string name;
-        std::size_t id;
-        std::size_t users { 0 };
+        std::uint64_t id;
+        std::uint64_t users { 0 };
 
         bool operator==(const MockChatroom& rhs) const noexcept {
             return id == rhs.id && users == rhs.users && name == rhs.name;
@@ -350,7 +355,7 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
     // #4 Add another client to the chatroom
-    auto client = std::make_shared<Client>(m_context);
+    auto client = std::make_shared<Client>(m_context, m_sslContext);
     client->Connect("127.0.0.1", "15001");
     this->JoinChatroom(desiredId, "user #2", *client);
 

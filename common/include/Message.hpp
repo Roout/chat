@@ -2,6 +2,7 @@
 #define INTERNAL_MESSAGE_HPP
 
 #include <memory>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include "QueryType.hpp"
@@ -51,7 +52,7 @@ namespace Internal {
          * It's a time in milliseconds within which the request 
          * is valid and can be processed.
          */
-        std::size_t m_timeout { 0 };
+        std::uint64_t m_timeout { 0 };
         
         /**
          * This is a data required for the choosen query type.

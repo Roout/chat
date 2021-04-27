@@ -12,7 +12,7 @@
 namespace net {
 
 Connection::Connection( 
-    std::size_t id
+    std::uint64_t id
     , asio::ip::tcp::socket && socket
     , asio::io_context * const context
     , std::shared_ptr<rt::RequestQueue> incommingRequests
@@ -67,7 +67,7 @@ void Connection::Close() {
     });
 }
 
-void Connection::Read(std::size_t ms, TimerCallback&& callback) {
+void Connection::Read(std::uint64_t ms, TimerCallback&& callback) {
     // start reading requests
     this->Read();
     // set up deadline timer for the SYN request from the accepted connection

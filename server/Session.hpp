@@ -92,11 +92,11 @@ public:
         m_user.m_username = std::move(name);
     }
 
-    bool AssignChatroom(std::size_t id);
+    bool AssignChatroom(std::uint64_t id);
 
     bool LeaveChatroom();
 
-    std::size_t CreateChatroom(const std::string& chatroomName);
+    std::uint64_t CreateChatroom(const std::string& chatroomName);
 
     std::vector<std::string> GetChatroomList() const noexcept;
 
@@ -150,7 +150,7 @@ private:
     /**
      * Time in milliseconds the session is ready to wait for the SYN request 
      */
-    const std::size_t m_timeout { 256 };
+    const std::uint64_t m_timeout { 256 };
 };
 
 

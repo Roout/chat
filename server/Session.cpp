@@ -82,7 +82,7 @@ void Session::Write(std::string text) {
     m_connection->Write(std::move(text));
 }
 
-bool Session::AssignChatroom(std::size_t id) {
+bool Session::AssignChatroom(std::uint64_t id) {
     if (m_service->AssignChatroom(id, this->shared_from_this())) {
         m_user.m_chatroom = id;
         return true;
@@ -107,7 +107,7 @@ bool Session::LeaveChatroom() {
     return false;
 }
 
-std::size_t Session::CreateChatroom(const std::string& chatroomName) {
+std::uint64_t Session::CreateChatroom(const std::string& chatroomName) {
     const auto roomId = m_service->CreateChatroom(chatroomName); 
     return roomId;
 }

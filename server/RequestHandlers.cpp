@@ -120,7 +120,7 @@ namespace RequestHandlers {
         reader.Parse(m_request->m_attachment.c_str());
         const auto roomId = reader["chatroom"]["id"].GetUint64();
 
-        if (m_service->AssignChatroom(roomId)) {
+        if (m_service->AssignChatroom(static_cast<size_t>(roomId))) {
             m_service->UpdateUsername(reader["user"]["name"].GetString());
         }
         else {

@@ -2,7 +2,9 @@
 #include <memory>
 #include <thread>
 #include <vector>
+
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "Client.hpp"
 
@@ -12,8 +14,18 @@ int main() {
 	std::shared_ptr<boost::asio::io_context> io { 
 		std::make_shared<boost::asio::io_context>() 
 	};
+	std::shared_ptr<boost::asio::ssl::context> sslContext { 
+		std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23) 
+	};
+
+	boost::system::error_code error;
+	sslContext->load_verify_file("ca.pem", error);
+	if (error) {
+		std::cerr << "Can't find ca.pem file.\n";
+		exit(1);
+	}
 	
-	auto client = std::make_shared<Client>(io);
+	auto client = std::make_shared<Client>(io, sslContext);
 	client->Connect("127.0.0.1", "15001");
 	vector<thread> ts;
 	for (int i = 0; i < 2; i++) {

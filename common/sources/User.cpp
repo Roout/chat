@@ -10,7 +10,7 @@ Internal::User::User() :
 { // default ctor
 }
 
-Internal::User::User(std::size_t id) :
+Internal::User::User(std::uint64_t id) :
     m_id { id }
 { // construct with existing id
 }

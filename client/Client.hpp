@@ -10,6 +10,7 @@
 #include "Utility.hpp"
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #ifndef UNIT_TESTS
 using Stream_t = boost::asio::ip::tcp::socket;
@@ -57,7 +58,13 @@ public:
 
 public:
 
-    Client(std::shared_ptr<boost::asio::io_context> io);
+    Client(
+        std::shared_ptr<boost::asio::io_context> io, 
+        std::shared_ptr<boost::asio::ssl::context> sslContext
+    );
+
+    Client(const Client&) = delete;
+    Client& operator=(const Client&) = delete;
 
     /**
      * Close connection if it's haven't been terminated yet. 
@@ -94,8 +101,9 @@ public:
     Internal::Response GetLastResponse() const noexcept;
 
 private:
-    std::shared_ptr<boost::asio::io_context> m_io { nullptr };
-    std::shared_ptr<client::Connection_t> m_connection { nullptr };
+    std::shared_ptr<boost::asio::io_context>    m_io { nullptr };
+    std::shared_ptr<boost::asio::ssl::context>  m_sslContext { nullptr };
+    std::shared_ptr<client::Connection_t>       m_connection { nullptr };
 
     // TODO: move to some other intermediate type between client and GUI
     Internal::Response m_response;

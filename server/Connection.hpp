@@ -26,7 +26,7 @@ public:
     using TimerCallback = std::function<void(const boost::system::error_code&)>;
 
     Connection(
-        std::size_t id
+        std::uint64_t id
         , asio::ip::tcp::socket && socket
         , asio::io_context * const context
         , std::shared_ptr<rt::RequestQueue> incommingRequests
@@ -39,7 +39,7 @@ public:
     /**
      * Read with timeout
      */
-    void Read(std::size_t ms, TimerCallback&&);
+    void Read(std::uint64_t ms, TimerCallback&&);
 
     /**
      * Write @text to remote connection.
@@ -152,9 +152,9 @@ private:
      * Define hom long the connection can wait for request 
      * from the client. Time is in milliseconds.
      */
-    std::size_t m_timeout { 128 };
+    std::uint64_t m_timeout { 128 };
 
-    const std::size_t m_id { 0 };
+    const std::uint64_t m_id { 0 };
 };
 
 template<class ...Args>

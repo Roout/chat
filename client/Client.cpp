@@ -5,8 +5,12 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-Client::Client(std::shared_ptr<boost::asio::io_context> io) 
+Client::Client(
+    std::shared_ptr<boost::asio::io_context> io
+    , std::shared_ptr<boost::asio::ssl::context> sslContext
+) 
     : m_io { io }
+    , m_sslContext { sslContext}
     , m_connection { nullptr }
 {
 }
@@ -18,7 +22,7 @@ Client::~Client() {
 }
 
 void Client::Connect(std::string_view path, std::string_view port) {
-    m_connection = std::make_shared<client::Connection_t>(this->weak_from_this(), m_io);
+    m_connection = std::make_shared<client::Connection_t>(this->weak_from_this(), m_io, m_sslContext);
     m_connection->Connect(path, port);
 }
 
