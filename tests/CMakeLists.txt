@@ -24,23 +24,40 @@ list(APPEND sources
   "all-tests.cpp"
 )
 
+find_package(OpenSSL REQUIRED)
+
 add_executable(${This} ${sources} ${headers})
 
 target_include_directories(${This} 
   PUBLIC ${RAPIDJSON_INCLUDE_DIR}
   PUBLIC ${SERVER_DIR}
   PUBLIC ${CLIENT_DIR}
+  PUBLIC ${OPENSSL_INCLUDE_DIR}
 )
 
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB -D_WIN32_WINNT=0x0601)
+add_definitions(
+  -DBOOST_DATE_TIME_NO_LIB 
+  -DBOOST_REGEX_NO_LIB 
+  -D_WIN32_WINNT=0x0601
+  -D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
+  -DRAPIDJSON_NOMEMBERITERATORCLASS
+)
 
 target_link_libraries(${This} PUBLIC
   gtest_main
   server_lib
   client_lib
+  OpenSSL::SSL
+  OpenSSL::Crypto
 )
 
 add_test(
   NAME ${This}
   COMMAND ${This}
+)
+
+target_compile_options(${This} PRIVATE
+  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:Clang>:-Wall -Werror -Wextra>>
+  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-Wall -Werror -Wextra>>
+  $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:MSVC>:/W3>>
 )

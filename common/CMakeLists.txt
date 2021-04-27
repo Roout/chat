@@ -34,7 +34,13 @@ target_include_directories(${This}
 	PUBLIC ${RAPIDJSON_INCLUDE_DIR}
 )
 
-add_definitions(-DBOOST_DATE_TIME_NO_LIB -DBOOST_REGEX_NO_LIB -D_WIN32_WINNT=0x0601)
+add_definitions(
+	-DBOOST_DATE_TIME_NO_LIB 
+	-DBOOST_REGEX_NO_LIB 
+	-D_WIN32_WINNT=0x0601
+	-D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
+	-DRAPIDJSON_NOMEMBERITERATORCLASS
+)
 
 find_package(Boost REQUIRED)
 
@@ -54,4 +60,10 @@ set(${This}_INCLUDE_DIRS
 	${PROJECT_SOURCE_DIR}/include
 	${Boost_INCLUDE_DIRS}
 	CACHE INTERNAL "${This}: Include Directories" FORCE
+)
+
+target_compile_options(${This} PRIVATE
+  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:Clang>:-Wall -Werror -Wextra>>
+  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-Wall -Werror -Wextra>>
+  $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:MSVC>:/W3>>
 )
