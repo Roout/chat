@@ -63,29 +63,9 @@ private:
     bool VerifyCertificate(
         bool preverified, 
         boost::asio::ssl::verify_context& ctx
-    ) {
-        // The verify callback can be used to check whether the certificate that is
-        // being presented is valid for the peer. For example, RFC 2818 describes
-        // the steps involved in doing this for HTTPS. Consult the OpenSSL
-        // documentation for more details. Note that the callback is called once
-        // for each certificate in the certificate chain, starting from the root
-        // certificate authority.
+    );
 
-        // In this example we will simply print the certificate's subject name.
-        char subject_name[256];
-        X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-        X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-        std::cout << "Verifying " << subject_name << "\n";
-
-        return preverified;
-    }
-
-
-    /**
-     * This method initialite handshake with server `on connection` event.
-     * I.e. it sends a request with SYN query type to server.
-     */
-    void Synchronize();
+    void Handshake();
 
     void OnConnect(
         const boost::system::error_code& err, 
@@ -155,8 +135,7 @@ void Connection<Stream>::Connect(std::string_view path, std::string_view port) {
     using std::placeholders::_2;
     
     m_stream.set_verify_mode(boost::asio::ssl::verify_peer);
-    m_stream.set_verify_callback(
-        std::bind(&Connection::VerifyCertificate, this->shared_from_this(), _1, _2));
+    m_stream.set_verify_callback(std::bind(&Connection::VerifyCertificate, this->shared_from_this(), _1, _2));
 
     asio::ip::tcp::resolver resolver(*m_io);
     const auto endpoints = resolver.resolve(path, port);
@@ -164,13 +143,45 @@ void Connection<Stream>::Connect(std::string_view path, std::string_view port) {
         this->Close();
     }
     else {
-        // const auto endpoint { endpoints.cbegin() };
         boost::asio::async_connect(
             m_stream.lowest_layer(),
             endpoints, 
             std::bind(&Connection::OnConnect, this->shared_from_this(), _1, _2)
         );
     }
+}
+
+template<class Stream>
+bool Connection<Stream>::VerifyCertificate(
+    bool preverified, 
+    boost::asio::ssl::verify_context& ctx
+) {
+    // In this example we will simply print the certificate's subject name.
+    char name[256];
+    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+    X509_NAME_oneline(X509_get_subject_name(cert), name, 256);
+    m_logger.Write(LogType::info, "Verifying", name, "\n");
+
+    return preverified;
+}
+
+template<class Stream>
+void Connection<Stream>::Handshake() {
+    m_stream.async_handshake(boost::asio::ssl::stream_base::client,
+        [self = this->shared_from_this()] (const boost::system::error_code& error) {
+            if (!error) {
+                if(auto model = self->m_client.lock(); model) {
+                    // update state
+                    model->SetState(Client::State::RECEIVE_ACK);
+                }
+                // start waiting incoming calls
+                self->Read();
+            }
+            else {
+                self->m_logger.Write(LogType::error, "Handshake failed:", error.message(), "\n");
+            }
+        }
+    );
 }
 
 template<class Stream>
@@ -189,10 +200,7 @@ void Connection<Stream>::OnConnect(
             // update state
             model->SetState(Client::State::WAIT_ACK);
         }
-        // send SYN
-        this->Synchronize();
-        // start waiting incoming calls
-        this->Read();
+        this->Handshake();
     }
 }
 
@@ -323,18 +331,6 @@ void Connection<Stream>::OnWrite(
         this->Close();
     }
 } 
-
-
-template<class Stream>
-void Connection<Stream>::Synchronize() {
-    if(auto model = m_client.lock(); model) {
-        std::string serialized{};
-        Internal::Request request = model->CreateSynchronizeRequest();
-        request.Write(serialized);
-        model->SetState(Client::State::WAIT_ACK);
-        this->Write(std::move(serialized));
-    }
-}
 
 } // namespace client
 

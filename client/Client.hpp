@@ -85,8 +85,6 @@ public:
 
     void HandleMessage(Internal::Response&&);
 
-    Internal::Request CreateSynchronizeRequest() const;
-    
     /**
      * Write message to the remote peer
      * @param text
