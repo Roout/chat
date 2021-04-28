@@ -5,7 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "DoubleBuffer.hpp"
 #include "Log.hpp"
@@ -27,14 +29,17 @@ public:
 
     Connection(
         std::uint64_t id
-        , asio::ip::tcp::socket && socket
+        , asio::ip::tcp::socket&& socket
         , asio::io_context * const context
+        , asio::ssl::context * const sslContext
         , std::shared_ptr<rt::RequestQueue> incommingRequests
     );
 
     ~Connection();
 
     void AddSubscriber(std::weak_ptr<Session> session);
+
+    void Handshake();
 
     /**
      * Read with timeout
@@ -117,7 +122,7 @@ private:
     /**
      * It's a socket connected to the remote peer. 
      */
-    asio::ip::tcp::socket m_socket;
+    asio::ssl::stream<asio::ip::tcp::socket> m_socket;
 
     asio::io_context::strand m_strand;
 

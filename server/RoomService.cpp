@@ -30,6 +30,25 @@ bool RoomService::AddSession(const std::shared_ptr<Session>& session) noexcept {
     return m_hall->AddSession(session);
 }
 
+void RoomService::RemoveSession(const std::shared_ptr<Session>& session) noexcept {
+    // Try to remove session from the hall
+    const auto isRemoved = m_hall->RemoveSession(session.get());
+    if (!isRemoved) {
+        // can't find session in chatroom for unAuth so look in rooms
+        const auto chatroomId = session->GetUser().m_chatroom;
+        // Critical section // 
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Find chatroom with required id
+        // If chatroom is found then try to assign session to chatroom
+        if (const auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
+            auto room = it->second;
+            // if chatroom was assigned successfully return true otherwise false
+            assert(room && "Room can't be nullptr");
+            (void) room->RemoveSession(session.get());
+        }
+    }
+}
+
 bool RoomService::AssignChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session) {
     // Remove session from the hall
     const auto isRemoved = m_hall->RemoveSession(session.get());

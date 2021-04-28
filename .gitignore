@@ -5,3 +5,6 @@ build/
 
 # google test
 googletest/
+
+# config files
+*.cfg

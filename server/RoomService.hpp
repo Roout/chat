@@ -28,6 +28,8 @@ public:
 
     bool AddSession(const std::shared_ptr<Session>& session) noexcept;
 
+    void RemoveSession(const std::shared_ptr<Session>& session) noexcept;
+
     /**
      * Get list of all available chatrooms user can join.
      * @return 

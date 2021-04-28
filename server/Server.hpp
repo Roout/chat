@@ -4,8 +4,10 @@
 #include <memory>   // std::shared_ptr
 #include <optional>
 #include <cstdint>
+#include <string>
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "Log.hpp"
 
@@ -25,7 +27,10 @@ public:
      * @param port
      *  This is a port the server will listen to.
      */
-    Server(std::shared_ptr<asio::io_context> io, std::uint16_t port);
+    Server(
+        std::shared_ptr<asio::io_context> io, 
+        std::uint16_t port
+    );
 
     /**
      * Start accepting connections on the given port
@@ -43,6 +48,26 @@ public:
     std::shared_ptr<chat::RoomService> GetRoomService() const;
 
 private:
+
+    struct Config final {
+        std::string password;
+        std::string certificate_chain_file;
+        std::string private_key_file;
+        std::string tmp_dh_file;
+
+        void LoadConfig();
+
+    private:
+        const char *PATH = "server.cfg";
+    };
+
+    void SetupSSL();
+
+    std::string PasswordCallback(
+        std::size_t max_length,  // The maximum size for a password.
+        // Whether password is for reading or writing.
+        boost::asio::ssl::context::password_purpose purpose 
+    );
 
     /**
      * Logging the custom message
@@ -63,6 +88,8 @@ private:
      */
     std::shared_ptr<asio::io_context> m_context;
     
+    std::shared_ptr<asio::ssl::context> m_sslContext;
+
     asio::ip::tcp::acceptor m_acceptor;
 
     /**
@@ -72,6 +99,8 @@ private:
     std::optional<asio::ip::tcp::socket> m_socket;
 
     std::shared_ptr<chat::RoomService> m_service { nullptr };
+
+    Config m_config{};
 };
 
 template<class ...Args>

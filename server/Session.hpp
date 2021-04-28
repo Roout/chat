@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "DoubleBuffer.hpp"
 #include "Message.hpp"
@@ -33,7 +34,8 @@ public:
     Session( 
         asio::ip::tcp::socket && socket, 
         std::shared_ptr<chat::RoomService> service,
-        std::shared_ptr<asio::io_context> context
+        std::shared_ptr<asio::io_context> context,
+        std::shared_ptr<asio::ssl::context> sslContext
     );
 
     ~Session() {
@@ -43,9 +45,9 @@ public:
     };
 
     /**
-     * Initiate read operation for the connection 
+     * Initiate handshake operation for the connection 
      */
-    void Read();
+    void Handshake();
 
     /**
      * queue text for writing through connection
@@ -82,7 +84,6 @@ public:
         return m_state == State::ACKNOWLEDGED;
     }
     
-
     /// Interface used by response handlers
     void AcknowledgeClient() noexcept {
         m_state = State::ACKNOWLEDGED;
@@ -95,6 +96,8 @@ public:
     bool AssignChatroom(std::uint64_t id);
 
     bool LeaveChatroom();
+
+    void RemoveFromService();
 
     std::uint64_t CreateChatroom(const std::string& chatroomName);
 
