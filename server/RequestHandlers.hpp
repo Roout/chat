@@ -59,16 +59,6 @@ namespace RequestHandlers {
         Response m_reply {};
     };
 
-    class Sync : public Executor {
-    public:
-        using Executor::Executor;
-
-    private:
-        bool IsValidRequest() override;
-
-        void ExecuteRequest() override;
-    };
-
     class LeaveChatroom : public Executor {
     public:
         using Executor::Executor;
@@ -125,11 +115,6 @@ namespace RequestHandlers {
         template<QueryType query>
         struct RequestExecutor {
             using Type = void; 
-        };
-
-        template<>
-        struct RequestExecutor<QueryType::SYN> {
-            using Type = Sync;
         };
 
         template<>

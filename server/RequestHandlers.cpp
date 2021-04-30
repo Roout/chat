@@ -43,36 +43,6 @@ namespace RequestHandlers {
         m_service->Write(m_replyStr);
     }
 
-    bool Sync::IsValidRequest() {
-        /// TODO: check incoming key
-        m_reply.m_query = QueryType::ACK;
-        if (m_service->IsWaitingSyn()) {
-            m_reply.m_status = 200;
-        }
-        else {
-            m_reply.m_status = 400;
-            m_reply.m_error = "Bad request. Already acknowledged.";
-        }
-        return m_reply.m_status == 200;
-    };
-
-    void Sync::ExecuteRequest() {
-        // proccessed key and generate answer
-        // add accept field to attachment
-        rapidjson::Document reader;
-        auto& alloc = reader.GetAllocator();
-        reader.Parse(m_request->m_attachment.c_str());
-
-        const std::string key { reader["key"].GetString() };
-        rapidjson::Value writer(rapidjson::kObjectType);
-        writer.AddMember("accept", rapidjson::Value(key.c_str(), alloc), alloc);
-        
-        m_reply.m_attachment = ::Serialize(writer); 
-
-        // change a service state
-        m_service->AcknowledgeClient();
-    };
-
     bool LeaveChatroom::IsValidRequest() {
         m_reply.m_query = QueryType::LEAVE_CHATROOM;
         // - only acknowledged client can join/leave the room
