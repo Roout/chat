@@ -85,6 +85,8 @@ void Connection::Close() {
                 subscriber->RemoveFromService();
             }
             self->m_state = State::CLOSED;
+            // unsubscribe
+            self->m_subscriber.reset();
         }
     });
 }
