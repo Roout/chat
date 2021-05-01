@@ -88,7 +88,6 @@ protected:
         this->WaitFor(m_waitTimeout);
         // test
         ASSERT_TRUE(m_client->GetState() == Client::State::RECEIVE_ACK) << "Client hasn't been acknowleged";
-        EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::ACK);
     }
 
     /**
@@ -355,9 +354,14 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
     // #4 Add another client to the chatroom
-    auto client = std::make_shared<Client>(m_context, m_sslContext);
+    auto sslContext = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+    auto client = std::make_shared<Client>(m_context, sslContext);
     client->Connect("127.0.0.1", "15001");
+    this->WaitFor(m_waitTimeout);
+    ASSERT_TRUE(client->GetState() == Client::State::RECEIVE_ACK) << "Client hasn't been acknowleged";
     this->JoinChatroom(desiredId, "user #2", *client);
+
+    auto room = m_server->GetRoomService()->GetChatroomData(desiredId);
 
     // #5 Build chat request
     const std::string msg { "Hello!I'm Bob!" };
