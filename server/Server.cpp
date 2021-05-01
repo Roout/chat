@@ -5,32 +5,55 @@
 #include <cassert>
 #include <exception>
 #include <fstream>
+#include <iostream>
+
+namespace {
+    template<class ...Args>
+    void ConsoleLog(Args&& [[maybe_unused]] ...args) {
+#ifdef UNIT_TESTS
+        ((std::cerr << " " << std::forward<Args>(args)), ...);
+#endif
+    }
+}
 
 void Server::Config::LoadConfig() {
+    ConsoleLog("Trying to load config file: <", Config::PATH, ">\n");
     std::ifstream in(Config::PATH);
     if (!in.is_open()) {
+        ConsoleLog("Can't open config file: <", Config::PATH, ">\n");
         assert(false && "TODO: Handle situation when file is absent!");
         exit(1);
     }
+    std::string_view keys[] = {
+        "password",
+        "certificate_chain_file",
+        "private_key_file",
+        "tmp_dh_file"
+    };
+
     std::string line;
     while (std::getline(in, line)) {
-        line = line.substr(line.find('"'));
-        line.pop_back();
-        if (line == "password") {
-            password = std::move(line);
+        auto value = line.substr(line.find('"') + 1);
+        value.pop_back();
+        auto key = std::string_view(line.data(), line.find_first_of(' '));
+        if (key == keys[0]) {
+            password = std::move(value);
+            ConsoleLog("\tread password... ***\n");
         }
-        else if (line == "certificate_chain_file") {
-            certificate_chain_file = std::move(line);
+        else if (key == keys[1]) {
+            certificate_chain_file = std::move(value);
+            ConsoleLog("\tread certificate chain file... ", certificate_chain_file, '\n');
         }
-        else if (line == "private_key_file") {
-            private_key_file = std::move(line);
+        else if (key == keys[2]) {
+            private_key_file = std::move(value);
+            ConsoleLog("\tread private key file... ", private_key_file, '\n');
         }
-        else if (line == "tmp_dh_file") {
-            tmp_dh_file = std::move(line);
+        else if (key == keys[3]) {
+            tmp_dh_file = std::move(value);
+            ConsoleLog("\tread tmp dh file... ", tmp_dh_file, '\n');
         }
         else {
-            assert(false && "LoadConfig: unreachable");
-            exit(1);
+            ConsoleLog("\tread: ", line, '\n');
         }
     }
 }
@@ -48,6 +71,8 @@ Server::Server(
 }
 
 void Server::SetupSSL() {
+    ConsoleLog("Trying to setup ssl context...\n");
+    ConsoleLog("Used options:\n\tdefault_workarounds \n\tno_sslv2 \n\tsingle_dh_use\n");
     m_sslContext->set_options(
         boost::asio::ssl::context::default_workarounds
         | boost::asio::ssl::context::no_sslv2
@@ -67,6 +92,7 @@ void Server::SetupSSL() {
         m_sslContext->use_tmp_dh_file(m_config.tmp_dh_file);
     }
     catch (std::exception const & e) {
+        ConsoleLog("[ERROR] Failed to setup ssl with error: ", e.what(), '\n');
         this->Write(LogType::error, "SetupSSL failed:", e.what(), '\n'); 
         exit(1);
     }
@@ -76,6 +102,7 @@ std::string Server::PasswordCallback(
     std::size_t max_length,  // The maximum size for a password.
     boost::asio::ssl::context::password_purpose purpose // Whether password is for reading or writing.
 ) {
+    ConsoleLog("Password Callback: ", max_length, '\n');
     return m_config.password;
 }
 

@@ -58,7 +58,7 @@ private:
         void LoadConfig();
 
     private:
-        const char *PATH = "server.cfg";
+        const char *PATH = "settings/server.cfg";
     };
 
     void SetupSSL();

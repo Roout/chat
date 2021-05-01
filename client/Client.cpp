@@ -12,13 +12,13 @@ Client::Client(
     , std::shared_ptr<boost::asio::ssl::context> sslContext
 ) 
     : m_io { io }
-    , m_sslContext { sslContext}
+    , m_sslContext { sslContext }
     , m_connection { nullptr }
 {
     boost::system::error_code error;
-	m_sslContext->load_verify_file("ca.pem", error);
+	m_sslContext->load_verify_file("settings/server.crt", error);
 	if (error) {
-		std::cerr << "Can't find ca.pem file.\n";
+		std::cerr << "[ERROR] Can't find <settings/server.crt> file.\n";
 		exit(1);
 	}
 }

@@ -12,11 +12,11 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
-#ifndef UNIT_TESTS
+// #ifndef UNIT_TESTS
 using Stream_t = boost::asio::ip::tcp::socket;
-#else
-using Stream_t = MockAsyncStream;
-#endif
+// #else
+// using Stream_t = MockAsyncStream;
+// #endif
 
 namespace client {
     template<class Stream>
