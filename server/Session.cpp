@@ -93,7 +93,7 @@ void Session::Write(std::string text) {
 }
 
 void Session::RemoveFromService() {
-    assert(!m_connection || m_connection->IsClosed());
+    assert(m_connection);
     if (m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
         m_service->RemoveSession(this->shared_from_this());
     }
