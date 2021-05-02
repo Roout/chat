@@ -1,10 +1,12 @@
-# Generating certificate
+# Generating and signing certificate
+
+## By hands
 
 Base on [Stack overflow answer](https://stackoverflow.com/questions/6452756/exception-running-boost-asio-ssl-example)
 
 ```console
 # Generate a private key
-PS E:\Projects\client-server\settings> openssl genrsa -des3 -out server.key 2048
+> openssl genrsa -des3 -out server.key 2048
 Generating RSA private key, 2048 bit long modulus (2 primes)
 .....................+++++
 e is 65537 (0x010001)
@@ -12,7 +14,7 @@ Enter pass phrase for server.key:
 Verifying - Enter pass phrase for server.key:
 
 # Generate Certificate signing request
-PS E:\Projects\client-server\settings> openssl req -new -key server.key -out server.csr
+> openssl req -new -key server.key -out server.csr
 Enter pass phrase for server.key:
 You are about to be asked to enter information that will be incorporated
 into your certificate request.
@@ -35,16 +37,24 @@ A challenge password []:.
 An optional company name []:.
 
 # Sign certificate with private key
-PS E:\Projects\client-server\settings> openssl x509 -req -days 3650 -in server.csr -signkey server.key -out server.crt
+> openssl x509 -req -days 3650 -in server.csr -signkey server.key -out server.crt
 Signature ok
 subject=C = RU, O = Roout, CN = bonachat, emailAddress = following2future@gmail.com
 Getting Private key
 Enter pass phrase for server.key:
 
 # Generate dhparam file
-PS E:\Projects\client-server\settings> openssl dhparam -out dh1024.pem 1024
+> openssl dhparam -out dh1024.pem 1024
 Generating DH parameters, 1024 bit long safe prime, generator 2
 This is going to take a long time
 ...+...........+.....+........................+..................................................+........+.......+......................+..........+...........+.........++*++*++*++*++*
 
-PS E:\Projects\client-server\settings>```
+>```
+
+## By script
+
+Base on [Script example](https://www.jamescoyle.net/how-to/1073-bash-script-to-create-an-ssl-certificate-key-and-request-csr)
+
+## References
+
+[openssl-req](https://www.openssl.org/docs/man1.1.1/man1/req.html)
