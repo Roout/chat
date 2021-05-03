@@ -52,7 +52,7 @@ target_link_libraries(${This} PUBLIC
 )
 
 set(all_configs
-  "dh1024.pem"
+  "dh2048.pem"
   "server.cfg"
   "server.crt"
   "server.key"

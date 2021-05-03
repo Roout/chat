@@ -35,12 +35,12 @@ openssl x509 -req -days 3650 -in $domain.csr -signkey $domain.key -out $domain.c
 
 # Generate dhparam file
 echo "Generate dhparam file... "
-openssl dhparam -out dh1024.pem 1024
+openssl dhparam -out dh2048.pem 2048
 
 folder=settings
 certificate_chain_file=$domain.crt
 private_key_file=$domain.key
-tmp_dh_file=dh1024.pem
+tmp_dh_file=dh2048.pem
 filename=$domain.cfg
 
 if [ -e $filename ]; then
