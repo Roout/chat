@@ -194,7 +194,9 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 4. Compare expected result and received response
     EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::LIST_CHATROOM);
     for (std::size_t i = 0; i < expectedRooms.size(); i++) {
-        EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
+        EXPECT_EQ(recievedRooms[i], expectedRooms[i]) << "Rooms are different: { "
+            << recievedRooms[i].name << ", " << recievedRooms[i].id << ", " << recievedRooms[i].users << " } != { "
+            << expectedRooms[i].name << ", " << expectedRooms[i].id << ", " << expectedRooms[i].users << " }";
     }
 }
 
