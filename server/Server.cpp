@@ -9,7 +9,7 @@
 
 namespace {
     template<class ...Args>
-    void ConsoleLog(Args&& [[maybe_unused]] ...args) {
+    void ConsoleLog([[maybe_unused]] Args&& ...args) {
 #ifdef UNIT_TESTS
         ((std::cerr << " " << std::forward<Args>(args)), ...);
 #endif
@@ -53,7 +53,7 @@ void Server::Config::LoadConfig() {
             ConsoleLog("\tread tmp dh file... ", tmp_dh_file, '\n');
         }
         else {
-            ConsoleLog("\tread: ", line, '\n');
+            ConsoleLog("\t[WARNING] read: ", line, '\n');
         }
     }
 }
