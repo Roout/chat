@@ -50,5 +50,5 @@ else
   echo "password               = \"$password\"" >> $filename
   echo "certificate_chain_file = \"$folder/$certificate_chain_file\"" >> $filename
   echo "private_key_file       = \"$folder/$private_key_file\"" >> $filename
-  echo "tmp_dh_file			   = \"$folder/$tmp_dh_file\"" >> $filename
+  echo "tmp_dh_file            = \"$folder/$tmp_dh_file\"" >> $filename
 fi

@@ -51,13 +51,30 @@ target_link_libraries(${This} PUBLIC
   OpenSSL::Crypto
 )
 
+set(all_configs
+  "dh1024.pem"
+  "server.cfg"
+  "server.crt"
+  "server.key"
+)
+
+foreach(config ${all_configs})
+  message(STATUS "\t\tTrying to copy to */settings/${config}")
+  # Copy files for ctests
+  configure_file("../settings/${config}" "settings/${config}" COPYONLY)
+  # Copy files for Debug
+  configure_file("../settings/${config}" "Debug/settings/${config}" COPYONLY)
+  # Copy files for Release
+  configure_file("../settings/${config}" "Release/settings/${config}" COPYONLY)
+endforeach()
+
 add_test(
   NAME ${This}
   COMMAND ${This}
 )
 
 target_compile_options(${This} PRIVATE
-  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:Clang>:-Wall -Werror -Wextra>>
-  # $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-Wall -Werror -Wextra>>
+  $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:Clang>:-Wall -Werror -Wextra>>
+  $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:GNU>:-Wall -Werror -Wextra>>
   $<$<COMPILE_LANGUAGE:CXX>:$<$<CXX_COMPILER_ID:MSVC>:/W3>>
 )
