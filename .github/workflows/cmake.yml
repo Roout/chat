@@ -4,6 +4,8 @@ on: pull_request
 
 env:
   BUILD_TYPE: Release
+  BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+  BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
 
 jobs:
   build-project:
@@ -12,10 +14,27 @@ jobs:
     steps:  
     - uses: actions/checkout@v2  
 
-    - name: Set enviroment variable
+    - name: Restore Boost cache
+      uses: actions/cache@v2
+      id: cache-boost
+      with:
+        path: ${{env.BOOST_ROOT}}
+        key: boost
+
+    - name: Install Boost
+      if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
-        echo "BOOST_ROOT=$BOOST_ROOT_1_72_0" >> $GITHUB_ENV
-        echo "BOOST_INCLUDEDIR=$BOOST_ROOT_1_72_0/include/boost" >> $GITHUB_ENV
+        if [ "$OS" == "Windows_NT" ]; then
+          # fix up paths to be forward slashes consistently
+          BOOST_ROOT=$(echo $BOOST_ROOT | sed 's/\\/\//g')
+        fi
+        mkdir -p $BOOST_ROOT
+        curl --progress-bar --location --output $BOOST_ROOT/download.tar.bz2 $BOOST_URL
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar.bz2 -y -bd
+        7z -o$BOOST_ROOT x $BOOST_ROOT/download.tar -y -bd
+        cd $BOOST_ROOT && cp -r boost_*/* .
+        rm -rf boost_*/* download.tar.bz2 download.tar
+      shell: bash
     
     - name: Create Build Environment
       run: |
