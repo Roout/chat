@@ -10,9 +10,9 @@
 namespace {
     template<class ...Args>
     void ConsoleLog([[maybe_unused]] Args&& ...args) {
-#ifdef UNIT_TESTS
+// #ifdef UNIT_TESTS
         ((std::cerr << " " << std::forward<Args>(args)), ...);
-#endif
+// #endif
     }
 }
 
