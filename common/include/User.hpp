@@ -2,6 +2,7 @@
 #define CHAT_USER_HPP
 
 #include <string>
+#include <cstdint>
 
 namespace Internal {
 
@@ -15,14 +16,14 @@ namespace Internal {
         static User FromJSON(const std::string& json);
       
         // Properties
-        const std::size_t m_id;
-        std::size_t m_chatroom;
+        const std::uint64_t m_id;
+        std::uint64_t m_chatroom;
         std::string m_username;
 
     private:
-        User(std::size_t id);
+        User(std::uint64_t id);
 
-        inline static std::size_t m_instance { 0 }; 
+        inline static std::uint64_t m_instance { 0 }; 
     };
 }
 

@@ -5,7 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "DoubleBuffer.hpp"
 #include "Log.hpp"
@@ -26,9 +28,10 @@ public:
     using TimerCallback = std::function<void(const boost::system::error_code&)>;
 
     Connection(
-        std::size_t id
-        , asio::ip::tcp::socket && socket
+        std::uint64_t id
+        , asio::ip::tcp::socket&& socket
         , asio::io_context * const context
+        , asio::ssl::context * const sslContext
         , std::shared_ptr<rt::RequestQueue> incommingRequests
     );
 
@@ -36,10 +39,12 @@ public:
 
     void AddSubscriber(std::weak_ptr<Session> session);
 
+    void Handshake();
+
     /**
      * Read with timeout
      */
-    void Read(std::size_t ms, TimerCallback&&);
+    void Read(std::uint64_t ms, TimerCallback&&);
 
     /**
      * Write @text to remote connection.
@@ -117,7 +122,7 @@ private:
     /**
      * It's a socket connected to the remote peer. 
      */
-    asio::ip::tcp::socket m_socket;
+    asio::ssl::stream<asio::ip::tcp::socket> m_socket;
 
     asio::io_context::strand m_strand;
 
@@ -152,9 +157,9 @@ private:
      * Define hom long the connection can wait for request 
      * from the client. Time is in milliseconds.
      */
-    std::size_t m_timeout { 128 };
+    std::uint64_t m_timeout { 128 };
 
-    const std::size_t m_id { 0 };
+    const std::uint64_t m_id { 0 };
 };
 
 template<class ...Args>

@@ -30,7 +30,26 @@ bool RoomService::AddSession(const std::shared_ptr<Session>& session) noexcept {
     return m_hall->AddSession(session);
 }
 
-bool RoomService::AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
+void RoomService::RemoveSession(const std::shared_ptr<Session>& session) noexcept {
+    // Try to remove session from the hall
+    const auto isRemoved = m_hall->RemoveSession(session.get());
+    if (!isRemoved) {
+        // can't find session in chatroom for unAuth so look in rooms
+        const auto chatroomId = session->GetUser().m_chatroom;
+        // Critical section // 
+        std::lock_guard<std::mutex> lock(m_mutex);
+        // Find chatroom with required id
+        // If chatroom is found then try to assign session to chatroom
+        if (const auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
+            auto room = it->second;
+            // if chatroom was assigned successfully return true otherwise false
+            assert(room && "Room can't be nullptr");
+            (void) room->RemoveSession(session.get());
+        }
+    }
+}
+
+bool RoomService::AssignChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session) {
     // Remove session from the hall
     const auto isRemoved = m_hall->RemoveSession(session.get());
     if (!isRemoved) {
@@ -72,7 +91,7 @@ void RoomService::BroadcastOnly(
     }
 }
 
-void RoomService::LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session) {
+void RoomService::LeaveChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session) {
     // Check whether it's a hall chatroom
     if (chatroomId == m_hall->GetId()) {
         /// TODO: user can't leave hall!
@@ -108,9 +127,9 @@ std::vector<std::string> RoomService::GetChatroomList() const noexcept {
     return list;
 }
 
-std::size_t RoomService::CreateChatroom(std::string name) {
+std::uint64_t RoomService::CreateChatroom(std::string name) {
     auto room { std::make_shared<Chatroom>(name) };
-    const std::size_t id { room->GetId() };
+    const std::uint64_t id { room->GetId() };
     { // Block
         std::lock_guard<std::mutex> lock(m_mutex);
         m_chatrooms.emplace(id, std::move(room));
@@ -118,7 +137,7 @@ std::size_t RoomService::CreateChatroom(std::string name) {
     return id;
 }
 
-std::size_t RoomService::GetChatroom(const Session* const session) const noexcept {
+std::uint64_t RoomService::GetChatroom(const Session* const session) const noexcept {
     // check the hall
     if (m_hall->Contains(session)) {
         return m_hall->GetId();
@@ -135,12 +154,12 @@ std::size_t RoomService::GetChatroom(const Session* const session) const noexcep
     return chat::Chatroom::NO_ROOM;
 }
 
-bool RoomService::ExistChatroom(std::size_t id) const noexcept {
+bool RoomService::ExistChatroom(std::uint64_t id) const noexcept {
     std::lock_guard<std::mutex> lock{ m_mutex };  
     return (m_chatrooms.find(id) != m_chatrooms.cend());
 }
 
-void RoomService::RemoveChatroom(std::size_t chatroomId) {
+void RoomService::RemoveChatroom(std::uint64_t chatroomId) {
     if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
         auto room = it->second;
         m_chatrooms.erase(it);
@@ -148,7 +167,7 @@ void RoomService::RemoveChatroom(std::size_t chatroomId) {
     }
 }
 
-bool RoomService::IsEmpty(std::size_t chatroomId) const noexcept {
+bool RoomService::IsEmpty(std::uint64_t chatroomId) const noexcept {
     std::lock_guard<std::mutex> lock{ m_mutex };  
     const auto it = m_chatrooms.find(chatroomId);
     return (it == m_chatrooms.cend() || it->second->IsEmpty());

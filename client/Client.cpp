@@ -5,10 +5,22 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
-Client::Client(std::shared_ptr<boost::asio::io_context> io) 
+#include <iostream>
+
+Client::Client(
+    std::shared_ptr<boost::asio::io_context> io
+    , std::shared_ptr<boost::asio::ssl::context> sslContext
+) 
     : m_io { io }
+    , m_sslContext { sslContext }
     , m_connection { nullptr }
 {
+    boost::system::error_code error;
+	m_sslContext->load_verify_file("settings/server.crt", error);
+	if (error) {
+		std::cerr << "[ERROR] Can't find <settings/server.crt> file.\n";
+		exit(1);
+	}
 }
 
 Client::~Client() {
@@ -18,7 +30,7 @@ Client::~Client() {
 }
 
 void Client::Connect(std::string_view path, std::string_view port) {
-    m_connection = std::make_shared<client::Connection_t>(this->weak_from_this(), m_io);
+    m_connection = std::make_shared<client::Connection_t>(this->weak_from_this(), m_io, m_sslContext);
     m_connection->Connect(path, port);
 }
 
@@ -45,38 +57,11 @@ Internal::Response Client::GetLastResponse() const noexcept {
     return m_response;
 }
 
-Internal::Request Client::CreateSynchronizeRequest() const {
-    Internal::Request request{};
-    request.m_timeout = 30;
-    request.m_timestamp = Utils::GetTimestamp();
-    request.m_query = Internal::QueryType::SYN;
-    
-    rapidjson::Document d;
-    const char* key = "234A$F(K(J@Jjsij2dk2k(@#KDfikwoik";
-    d.SetObject().AddMember("key", rapidjson::Value(key, d.GetAllocator()), d.GetAllocator());
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    d.Accept(writer);
-    request.m_attachment = std::string(buffer.GetString(), buffer.GetSize());
-    return request;
-}
-
 void Client::HandleMessage(Internal::Response&& response) {
     m_response = std::move(response);
     std::lock_guard<std::mutex> lock{ m_mutex };
     switch(m_state) {
         case State::WAIT_ACK: {
-            bool isAckQuery { m_response.m_query == Internal::QueryType::ACK };
-            bool hasValidStatus { m_response.m_status == 200 };
-            bool hasValidKey { true };
-            // confirm status
-            // confirm whether it's our server (proccessing the key)
-            if (isAckQuery && hasValidStatus && hasValidKey) {
-                m_state = State::RECEIVE_ACK;
-            } 
-            else {
-                this->CloseConnection();
-            }
         } break;
         case State::RECEIVE_ACK: {
             // TODO: send to gui or smth

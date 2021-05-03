@@ -1,9 +1,12 @@
 #include <iostream>
 #include <memory>
-#include <boost/asio.hpp>
 #include <thread>
 #include <exception>
 #include <vector>
+
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+
 #include "Server.hpp"
 
 int main() {

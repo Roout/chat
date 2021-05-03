@@ -12,12 +12,13 @@
 namespace net {
 
 Connection::Connection( 
-    std::size_t id
+    std::uint64_t id
     , asio::ip::tcp::socket && socket
     , asio::io_context * const context
+    , asio::ssl::context * const sslContext
     , std::shared_ptr<rt::RequestQueue> incommingRequests
 )   
-    : m_socket { std::move(socket) }
+    : m_socket { std::move(socket), *sslContext }
     , m_strand { *context }
     , m_timer { *context }
     , m_incommingRequests { incommingRequests }
@@ -31,6 +32,23 @@ Connection::~Connection() {
     if (m_state != State::CLOSED) {
         this->Close();
     }
+}
+
+void Connection::Handshake() {
+    auto callback = [self = this->shared_from_this()](const boost::system::error_code& error) {
+        if (!error) {
+            self->m_logger->Write(LogType::info, "Handshake successed\n");
+            if (auto subscriber = self->m_subscriber.lock(); subscriber) {
+                subscriber->AcknowledgeClient();
+            }
+            self->Read();
+        }
+        else {
+            self->m_logger->Write(LogType::error, "Handshake failed", error.message(), "\n");
+            self->Close();
+        }
+    };
+    m_socket.async_handshake(boost::asio::ssl::stream_base::server, callback);
 }
 
 void Connection::Publish() {
@@ -47,7 +65,7 @@ void Connection::Close() {
     boost::asio::post(m_strand, [self = this->shared_from_this()]() {
         if (self->m_state != State::CLOSED) {
             boost::system::error_code error;
-            self->m_socket.shutdown(asio::ip::tcp::socket::shutdown_both, error);
+            self->m_socket.lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, error);
             if (error) { 
                 self->AddLog(LogType::error, 
                     "Connection's socket called shutdown with error:"
@@ -55,19 +73,25 @@ void Connection::Close() {
                 );
                 error.clear();
             }
-            self->m_socket.close(error);
+            self->m_socket.lowest_layer().close(error);
             if (error) {
                 self->AddLog(LogType::error, 
                     "Connection's socket is being closed with error:"
                     , error.message(), '\n'
                 );
             } 
+            if (auto subscriber = self->m_subscriber.lock(); subscriber) {
+                // remove connection from the chatroom and hall
+                subscriber->RemoveFromService();
+            }
             self->m_state = State::CLOSED;
+            // unsubscribe
+            self->m_subscriber.reset();
         }
     });
 }
 
-void Connection::Read(std::size_t ms, TimerCallback&& callback) {
+void Connection::Read(std::uint64_t ms, TimerCallback&& callback) {
     // start reading requests
     this->Read();
     // set up deadline timer for the SYN request from the accepted connection
@@ -125,9 +149,7 @@ void Connection::WriteSomeHandler(
     std::size_t transferredBytes
 ) {
     if (!error) {
-        this->AddLog(LogType::info, 
-            "Connection sent:", transferredBytes, "bytes.\n"
-        );
+        this->AddLog(LogType::info, "Connection sent:", transferredBytes, "bytes.\n");
         if (m_outbox.GetQueueSize()) {
             // we need to Write other data
             this->AddLog(LogType::info, 
@@ -166,7 +188,7 @@ void Connection::ReadSomeHandler(
         
         boost::system::error_code ec; 
         this->AddLog(LogType::info, 
-            m_socket.remote_endpoint(ec), ':', received, '\n'
+            m_socket.lowest_layer().remote_endpoint(ec), ':', received, '\n'
         );
 
         // Handle exceptions

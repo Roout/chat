@@ -13,6 +13,7 @@
 #include "Client.hpp"
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 
 /** TODO: implement these functions for Stream
@@ -35,6 +36,7 @@ public:
 
     Connection(std::weak_ptr<Client> client
         , std::shared_ptr<boost::asio::io_context> context
+        , std::shared_ptr<boost::asio::ssl::context> sslContext
     );
 
     /**
@@ -57,13 +59,18 @@ public:
     void Close();
 
 private:
-    /**
-     * This method initialite handshake with server `on connection` event.
-     * I.e. it sends a request with SYN query type to server.
-     */
-    void Synchronize();
 
-    void OnConnect(const boost::system::error_code& err);
+    bool VerifyCertificate(
+        bool preverified, 
+        boost::asio::ssl::verify_context& ctx
+    );
+
+    void Handshake();
+
+    void OnConnect(
+        const boost::system::error_code& err, 
+        const boost::asio::ip::tcp::endpoint& endpoint
+    );
 
     void Read();
     
@@ -96,8 +103,10 @@ private:
     
     std::weak_ptr<Client> m_client;
     std::shared_ptr<boost::asio::io_context> m_io;
+    std::shared_ptr<boost::asio::ssl::context> m_sslContext;
+
     boost::asio::io_context::strand m_strand;
-    Stream m_stream;
+    boost::asio::ssl::stream<Stream> m_stream;
     
     bool m_isWriting { false };
     boost::asio::streambuf m_inbox;
@@ -107,34 +116,79 @@ private:
 template<class Stream>
 Connection<Stream>::Connection(std::weak_ptr<Client> client
     , std::shared_ptr<boost::asio::io_context> context
+    , std::shared_ptr<boost::asio::ssl::context> sslContext
 ) 
     : m_client { client }
     , m_io { context }
+    , m_sslContext { sslContext }
     , m_strand { *context }
-    , m_stream { *context }
-{}
+    , m_stream { *context, *sslContext }
+{
+}
 
 template<class Stream>
 Connection<Stream>::~Connection() {}
 
 template<class Stream>
 void Connection<Stream>::Connect(std::string_view path, std::string_view port) {
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    
+    m_stream.set_verify_mode(boost::asio::ssl::verify_peer);
+    m_stream.set_verify_callback(std::bind(&Connection::VerifyCertificate, this->shared_from_this(), _1, _2));
+
     asio::ip::tcp::resolver resolver(*m_io);
     const auto endpoints = resolver.resolve(path, port);
     if (endpoints.empty()) {
         this->Close();
     }
     else {
-        const auto endpoint { endpoints.cbegin()->endpoint() };
-        m_stream.async_connect(
-            endpoint, 
-            std::bind(&Connection::OnConnect, this->shared_from_this(), std::placeholders::_1)
+        boost::asio::async_connect(
+            m_stream.lowest_layer(),
+            endpoints, 
+            std::bind(&Connection::OnConnect, this->shared_from_this(), _1, _2)
         );
     }
 }
 
 template<class Stream>
-void Connection<Stream>::OnConnect(const boost::system::error_code& error) {
+bool Connection<Stream>::VerifyCertificate(
+    bool preverified, 
+    boost::asio::ssl::verify_context& ctx
+) {
+    // In this example we will simply print the certificate's subject name.
+    char name[256];
+    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+    X509_NAME_oneline(X509_get_subject_name(cert), name, 256);
+    m_logger.Write(LogType::info, "Verifying", name, "\n");
+
+    return preverified;
+}
+
+template<class Stream>
+void Connection<Stream>::Handshake() {
+    m_stream.async_handshake(boost::asio::ssl::stream_base::client,
+        [self = this->shared_from_this()] (const boost::system::error_code& error) {
+            if (!error) {
+                if(auto model = self->m_client.lock(); model) {
+                    // update state
+                    model->SetState(Client::State::RECEIVE_ACK);
+                }
+                // start waiting incoming calls
+                self->Read();
+            }
+            else {
+                self->m_logger.Write(LogType::error, "Handshake failed:", error.message(), "\n");
+            }
+        }
+    );
+}
+
+template<class Stream>
+void Connection<Stream>::OnConnect(
+    const boost::system::error_code& error, 
+    const boost::asio::ip::tcp::endpoint& endpoint
+) {
     if (error) {
         m_logger.Write(LogType::error,
             "Connection failed to connect with error: ", error.message(), "\n"
@@ -146,10 +200,7 @@ void Connection<Stream>::OnConnect(const boost::system::error_code& error) {
             // update state
             model->SetState(Client::State::WAIT_ACK);
         }
-        // send SYN
-        this->Synchronize();
-        // start waiting incoming calls
-        this->Read();
+        this->Handshake();
     }
 }
 
@@ -157,7 +208,7 @@ template<class Stream>
 void Connection<Stream>::Close() {
     boost::asio::post(m_strand, [self = this->shared_from_this()]() {
         boost::system::error_code error;
-        self->m_stream.shutdown(asio::ip::tcp::socket::shutdown_both, error);
+        self->m_stream.lowest_layer().shutdown(asio::ip::tcp::socket::shutdown_both, error);
         if (error) {
             self->m_logger.Write(LogType::error, 
                 "Connection's socket called shutdown with error: ", error.message(), '\n'
@@ -165,7 +216,7 @@ void Connection<Stream>::Close() {
             error.clear();
         }
         
-        self->m_stream.close(error);
+        self->m_stream.lowest_layer().close(error);
         if (error) {
             self->m_logger.Write(LogType::error, 
                 "Connection's socket is being closed with error: ", error.message(), '\n'
@@ -245,7 +296,7 @@ void Connection<Stream>::OnRead(
         incomingResponse.Read(received);
         
         boost::system::error_code error; 
-        m_logger.Write(LogType::info, m_stream.remote_endpoint(error), ':', received, '\n');
+        m_logger.Write(LogType::info, m_stream.lowest_layer().remote_endpoint(error), ':', received, '\n');
 
         if(auto model = m_client.lock(); model) {
             /* if it's ACK, we resolve the State in synchronous way, otherwise resolve asyncronously */
@@ -280,18 +331,6 @@ void Connection<Stream>::OnWrite(
         this->Close();
     }
 } 
-
-
-template<class Stream>
-void Connection<Stream>::Synchronize() {
-    if(auto model = m_client.lock(); model) {
-        std::string serialized{};
-        Internal::Request request = model->CreateSynchronizeRequest();
-        request.Write(serialized);
-        model->SetState(Client::State::WAIT_ACK);
-        this->Write(std::move(serialized));
-    }
-}
 
 } // namespace client
 

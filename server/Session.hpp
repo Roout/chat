@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include "DoubleBuffer.hpp"
 #include "Message.hpp"
@@ -33,7 +34,8 @@ public:
     Session( 
         asio::ip::tcp::socket && socket, 
         std::shared_ptr<chat::RoomService> service,
-        std::shared_ptr<asio::io_context> context
+        std::shared_ptr<asio::io_context> context,
+        std::shared_ptr<asio::ssl::context> sslContext
     );
 
     ~Session() {
@@ -43,9 +45,9 @@ public:
     };
 
     /**
-     * Initiate read operation for the connection 
+     * Initiate handshake operation for the connection 
      */
-    void Read();
+    void Handshake();
 
     /**
      * queue text for writing through connection
@@ -82,7 +84,6 @@ public:
         return m_state == State::ACKNOWLEDGED;
     }
     
-
     /// Interface used by response handlers
     void AcknowledgeClient() noexcept {
         m_state = State::ACKNOWLEDGED;
@@ -92,11 +93,13 @@ public:
         m_user.m_username = std::move(name);
     }
 
-    bool AssignChatroom(std::size_t id);
+    bool AssignChatroom(std::uint64_t id);
 
     bool LeaveChatroom();
 
-    std::size_t CreateChatroom(const std::string& chatroomName);
+    void RemoveFromService();
+
+    std::uint64_t CreateChatroom(const std::string& chatroomName);
 
     std::vector<std::string> GetChatroomList() const noexcept;
 
@@ -150,7 +153,7 @@ private:
     /**
      * Time in milliseconds the session is ready to wait for the SYN request 
      */
-    const std::size_t m_timeout { 256 };
+    const std::uint64_t m_timeout { 256 };
 };
 
 

@@ -28,6 +28,8 @@ public:
 
     bool AddSession(const std::shared_ptr<Session>& session) noexcept;
 
+    void RemoveSession(const std::shared_ptr<Session>& session) noexcept;
+
     /**
      * Get list of all available chatrooms user can join.
      * @return 
@@ -50,8 +52,8 @@ public:
      * @note
      *  Thread-safety: safe
      */
-    auto GetChatroomData(std::size_t id) const noexcept 
-        -> std::optional<std::tuple<std::size_t, std::size_t, std::string>>
+    auto GetChatroomData(std::uint64_t id) const noexcept 
+        -> std::optional<std::tuple<std::uint64_t, std::uint64_t, std::string>>
     {
         std::lock_guard<std::mutex> lock (m_mutex);
         if(auto it = m_chatrooms.find(id); it != m_chatrooms.end()) {
@@ -76,7 +78,7 @@ public:
      * @note
      *  Thread-safety: safe
      */
-    std::size_t CreateChatroom(std::string name);
+    std::uint64_t CreateChatroom(std::string name);
 
     /**
      * Move session from hall chatroom to the chatroom with required id. 
@@ -91,7 +93,7 @@ public:
      *  Session can be only in the one chatroom at the same time
      *  Thread-safety: safe
      */
-    bool AssignChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session);
+    bool AssignChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session);
 
     /**
      * Move session from the current chatroom to the hall chatroom 
@@ -103,7 +105,7 @@ public:
      *  Session can be only in the one chatroom at the same time.
      *  Thread-safety: safe
      */
-    void LeaveChatroom(std::size_t chatroomId, const std::shared_ptr<Session>& session);
+    void LeaveChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session);
     
     /**
      * Get ID of the chatroom this session belong to.
@@ -115,7 +117,7 @@ public:
      * @note
      *  Thread-safety: safe
      */
-    std::size_t GetChatroom(const Session* const session) const noexcept;
+    std::uint64_t GetChatroom(const Session* const session) const noexcept;
 
     /**
      * Conditional broadcast message to users in the chatroom which @source belongs.
@@ -143,7 +145,7 @@ public:
      * @note
      *  Thread-safety : safe
      */
-    bool ExistChatroom(std::size_t chatroomId) const noexcept;
+    bool ExistChatroom(std::uint64_t chatroomId) const noexcept;
 
     /**
      * Remove chatroom from the chatroom pool.
@@ -152,7 +154,7 @@ public:
      * @note
      *  Thread-safety: NOT-safe
      */   
-    void RemoveChatroom(std::size_t chatroomId);
+    void RemoveChatroom(std::uint64_t chatroomId);
 
     /**
      * Check whether a chatroom with the given ID is empty (without users).
@@ -163,7 +165,7 @@ public:
      * @note
      *  Thread-safety: safe
      */
-    bool IsEmpty(std::size_t chatroomId) const noexcept;
+    bool IsEmpty(std::uint64_t chatroomId) const noexcept;
 
 private:
 
@@ -177,7 +179,7 @@ private:
     /**
      * Keep active chatrooms which can be accessed by their ID as key. 
      */
-    std::unordered_map<std::size_t, std::shared_ptr<chat::Chatroom>> m_chatrooms;
+    std::unordered_map<std::uint64_t, std::shared_ptr<chat::Chatroom>> m_chatrooms;
 
     /**
      * Virtual chatroom which is just a hall to keep all connections

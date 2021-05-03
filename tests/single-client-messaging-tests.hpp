@@ -16,10 +16,14 @@
 #include <thread>
 #include <regex>
 #include <cstddef>
+#include <cstdint>
 
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+
+#include <boost/asio/ssl.hpp>
+#include <boost/asio.hpp>
 
 /// Helper functions:
 
@@ -37,13 +41,14 @@ protected:
 
     void SetUp() override {
         m_context = std::make_shared<boost::asio::io_context>();
+        m_sslContext = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
         m_timer = std::make_shared<boost::asio::deadline_timer>(*m_context);
 
         // Create server and start accepting connections
         m_server = std::make_unique<Server>(m_context, 15001);
         m_server->Start();
         // Create client and connect to server
-        m_client = std::make_shared<Client>(m_context);
+        m_client = std::make_shared<Client>(m_context, m_sslContext);
         m_client->Connect("127.0.0.1", "15001");
 
         for (int i = 0; i < 4; i++) {
@@ -71,7 +76,7 @@ protected:
         }
     }   
 
-    void WaitFor(std::size_t ms) {
+    void WaitFor(std::uint64_t ms) {
         m_timer->expires_from_now(boost::posix_time::millisec(ms));
         m_timer->wait();
     }
@@ -84,7 +89,6 @@ protected:
         this->WaitFor(m_waitTimeout);
         // test
         ASSERT_TRUE(m_client->GetState() == Client::State::RECEIVE_ACK) << "Client hasn't been acknowleged";
-        EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::ACK);
     }
 
     /**
@@ -97,7 +101,7 @@ protected:
      * @param client
      *  A client wished to join a chatroom
      */
-    void JoinChatroom(std::size_t id, const std::string& username, Client& client) {
+    void JoinChatroom(std::uint64_t id, const std::string& username, Client& client) {
         Internal::Request request{};
         request.m_query = Internal::QueryType::JOIN_CHATROOM;
         request.m_timeout = m_waitTimeout;
@@ -119,12 +123,13 @@ protected:
     }
 
 protected:
+    std::shared_ptr<boost::asio::io_context> m_context {};
+    std::shared_ptr<boost::asio::ssl::context> m_sslContext {};
     std::unique_ptr<Server> m_server {};
     std::shared_ptr<Client> m_client {};
-    std::shared_ptr<boost::asio::io_context> m_context {};
     std::vector<std::thread> m_threads {};
     std::shared_ptr<boost::asio::deadline_timer> m_timer;
-    const std::size_t m_waitTimeout { 128 };
+    const std::uint64_t m_waitTimeout { 128 };
 };
 
 /**
@@ -145,11 +150,15 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     /// 1. Server creates chatrooms
     struct MockChatroom {
         std::string name;
-        std::size_t id;
-        std::size_t users { 0 };
+        std::uint64_t id;
+        std::uint64_t users { 0 };
 
         bool operator==(const MockChatroom& rhs) const noexcept {
             return id == rhs.id && users == rhs.users && name == rhs.name;
+        }
+
+        bool operator<(const MockChatroom& rhs) const noexcept {
+            return id < rhs.id;
         }
     };
 
@@ -158,7 +167,8 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     expectedRooms[0].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[0].name);
     expectedRooms[1].name = "Dota 2";
     expectedRooms[1].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[1].name);
- 
+    std::sort(expectedRooms.begin(), expectedRooms.end());    
+
     /// 2. Request chatroom list
     Internal::Request listRequest{};
     listRequest.m_query = Internal::QueryType::LIST_CHATROOM;
@@ -186,10 +196,13 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
         recievedRooms[i].users = roomObj["users"].GetUint64(); 
         i++;
     }
+    std::sort(recievedRooms.begin(), recievedRooms.end());    
     /// 4. Compare expected result and received response
     EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::LIST_CHATROOM);
     for (std::size_t i = 0; i < expectedRooms.size(); i++) {
-        EXPECT_EQ(recievedRooms[i], expectedRooms[i]);
+        EXPECT_TRUE(recievedRooms[i] == expectedRooms[i]) << "Rooms are different: { "
+            << recievedRooms[i].name << ", " << recievedRooms[i].id << ", " << recievedRooms[i].users << " } != { "
+            << expectedRooms[i].name << ", " << expectedRooms[i].id << ", " << expectedRooms[i].users << " }";
     }
 }
 
@@ -270,7 +283,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     for (const auto& room: currentChatroomList) {
         EXPECT_TRUE(std::regex_match(room, match, rx));
 
-        if (std::stoi(match[1].str()) == id) {
+        if (static_cast<std::uint64_t>(std::stoi(match[1].str())) == id) {
             EXPECT_FALSE(foundMatchRoom) << "Room with ID = " << id << " already exist.";
             foundMatchRoom = true;
             EXPECT_EQ(desiredChatroomName, match[2].str());
@@ -350,9 +363,14 @@ TEST_F(BasicInteractionTest, ChatMessageRequest) {
     EXPECT_TRUE(joinReply.m_attachment.empty());
 
     // #4 Add another client to the chatroom
-    auto client = std::make_shared<Client>(m_context);
+    auto sslContext = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+    auto client = std::make_shared<Client>(m_context, sslContext);
     client->Connect("127.0.0.1", "15001");
+    this->WaitFor(m_waitTimeout);
+    ASSERT_TRUE(client->GetState() == Client::State::RECEIVE_ACK) << "Client hasn't been acknowleged";
     this->JoinChatroom(desiredId, "user #2", *client);
+
+    auto room = m_server->GetRoomService()->GetChatroomData(desiredId);
 
     // #5 Build chat request
     const std::string msg { "Hello!I'm Bob!" };

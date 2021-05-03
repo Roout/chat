@@ -11,7 +11,8 @@
 Session::Session( 
     asio::ip::tcp::socket && socket, 
     std::shared_ptr<chat::RoomService> service,
-    std::shared_ptr<asio::io_context> context
+    std::shared_ptr<asio::io_context> context,
+    std::shared_ptr<asio::ssl::context> sslContext
 ) 
     : m_service { service }
     , m_incommingRequests { std::make_shared<rt::RequestQueue>() }
@@ -20,6 +21,7 @@ Session::Session(
         m_user.m_id
         , std::move(socket)
         , m_context.get()
+        , sslContext.get()
         , m_incommingRequests
     )}
 {
@@ -27,11 +29,13 @@ Session::Session(
 }
 
 void Session::Close() {
+    assert(m_connection && "Connection can't be nullptr");
     m_connection->Close();
     // m_connection.reset();
 }
 
 void Session::Subscribe() {
+    assert(m_connection && "Connection can't be nullptr");
     // Subscribe on connection
     m_connection->AddSubscriber(this->weak_from_this());
 }
@@ -63,26 +67,40 @@ void Session::AcquireRequests() {
     });
 }
 
-void Session::Read() {
-    m_connection->Read(m_timeout, 
-        [self = this->shared_from_this()](const boost::system::error_code& error) {
-            const bool isCanceled { error == boost::asio::error::operation_aborted };
-            const bool endWithoutError { !error || isCanceled };
-            const bool isAcknowledged { self->m_state == State::ACKNOWLEDGED };
-            if (endWithoutError && !isAcknowledged) {
-                // self->AddLog(LogType::info, "Connection has been closed due to timeout.");
-                self->Close();
-            } 
-        }
-    );
+// void Session::Read() {
+//     m_connection->Read(m_timeout, 
+//         [self = this->shared_from_this()](const boost::system::error_code& error) {
+//             const bool isCanceled { error == boost::asio::error::operation_aborted };
+//             const bool endWithoutError { !error || isCanceled };
+//             const bool isAcknowledged { self->m_state == State::ACKNOWLEDGED };
+//             if (endWithoutError && !isAcknowledged) {
+//                 // self->AddLog(LogType::info, "Connection has been closed due to timeout.");
+//                 self->Close();
+//             } 
+//         }
+//     );
+//     m_state = State::WAIT_SYN;
+// }
+
+void Session::Handshake() {
+    m_connection->Handshake();
     m_state = State::WAIT_SYN;
 }
 
 void Session::Write(std::string text) {
+    assert(m_connection && !m_connection->IsClosed());
     m_connection->Write(std::move(text));
 }
 
-bool Session::AssignChatroom(std::size_t id) {
+void Session::RemoveFromService() {
+    assert(m_connection);
+    if (m_user.m_chatroom != chat::Chatroom::NO_ROOM) {
+        m_service->RemoveSession(this->shared_from_this());
+    }
+    m_state = State::CLOSED;
+}
+
+bool Session::AssignChatroom(std::uint64_t id) {
     if (m_service->AssignChatroom(id, this->shared_from_this())) {
         m_user.m_chatroom = id;
         return true;
@@ -107,7 +125,7 @@ bool Session::LeaveChatroom() {
     return false;
 }
 
-std::size_t Session::CreateChatroom(const std::string& chatroomName) {
+std::uint64_t Session::CreateChatroom(const std::string& chatroomName) {
     const auto roomId = m_service->CreateChatroom(chatroomName); 
     return roomId;
 }
@@ -120,9 +138,6 @@ void Session::HandleRequest(Internal::Request&& request) {
     using QueryType = Internal::QueryType;
 
     switch (request.m_query) {
-        case QueryType::SYN: { 
-            CreateExecutor<QueryType::SYN>(&request, this)->Run();
-        } break;
         case QueryType::LEAVE_CHATROOM: { 
             CreateExecutor<QueryType::LEAVE_CHATROOM>(&request, this)->Run();
         } break;
