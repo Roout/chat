@@ -156,6 +156,10 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
         bool operator==(const MockChatroom& rhs) const noexcept {
             return id == rhs.id && users == rhs.users && name == rhs.name;
         }
+
+        bool operator<(const MockChatroom& rhs) const noexcept {
+            return id < rhs.id;
+        }
     };
 
     std::array<MockChatroom, 2> expectedRooms;
@@ -163,7 +167,8 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
     expectedRooms[0].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[0].name);
     expectedRooms[1].name = "Dota 2";
     expectedRooms[1].id = m_server->GetRoomService()->CreateChatroom(expectedRooms[1].name);
- 
+    std::sort(expectedRooms.begin(), expectedRooms.end());    
+
     /// 2. Request chatroom list
     Internal::Request listRequest{};
     listRequest.m_query = Internal::QueryType::LIST_CHATROOM;
@@ -191,10 +196,11 @@ TEST_F(BasicInteractionTest, ChatroomListRequest) {
         recievedRooms[i].users = roomObj["users"].GetUint64(); 
         i++;
     }
+    std::sort(recievedRooms.begin(), recievedRooms.end());    
     /// 4. Compare expected result and received response
     EXPECT_EQ(m_client->GetLastResponse().m_query, Internal::QueryType::LIST_CHATROOM);
     for (std::size_t i = 0; i < expectedRooms.size(); i++) {
-        EXPECT_EQ(recievedRooms[i], expectedRooms[i]) << "Rooms are different: { "
+        EXPECT_TRUE(recievedRooms[i] == expectedRooms[i]) << "Rooms are different: { "
             << recievedRooms[i].name << ", " << recievedRooms[i].id << ", " << recievedRooms[i].users << " } != { "
             << expectedRooms[i].name << ", " << expectedRooms[i].id << ", " << expectedRooms[i].users << " }";
     }
