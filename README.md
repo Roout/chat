@@ -4,7 +4,7 @@
 
 Async client server chat written on C++ (std::c++17) using boost::asio library.
 
-## Target
+## Goal
 
 1. to formalize the data exchange, the server may implement an API
     - define specific content format
@@ -14,6 +14,36 @@ Async client server chat written on C++ (std::c++17) using boost::asio library.
 4. encryption should be applied if sensitive information is to be communicated between the client and the server.
 
 TCP protocol will be used.
+
+## Requirements
+
+- CMake 3.16 or higher
+- C++17 standard or higher
+- boost 1.72.0 or higher for asio
+- OpenSSL 1.1.1l
+- google test will be downloaded by cmake as external project (see [vendor/gtest](vendor/googletest.txt.in))
+- rapidjson   will be downloaded by cmake as external project (see [vendor/rapidjson](vendor/rapidjson.cmake))
+
+## Quick start
+
+```bash
+...
+```
+
+## Notes
+
+- There is a [bash script](settings/gen-crt.sh) used to generate all needed information for the server.
+You shoud run it before building project
+
+```bash
+cd settings
+# provide domain name (server for this case)
+# also note, script must be executable
+gen-crt.sh server
+```
+
+- Notes when using boost.asio
+[Learning notes](NOTES.md)
 
 ## TODO
 
