@@ -16,6 +16,7 @@
 #include <thread>
 #include <regex>
 #include <cstddef>
+#include <cstdint>
 
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
@@ -274,7 +275,7 @@ TEST_F(BasicInteractionTest, CreateChatroomRequest) {
     for (const auto& room: currentChatroomList) {
         EXPECT_TRUE(std::regex_match(room, match, rx));
 
-        if (std::stoi(match[1].str()) == id) {
+        if (static_cast<std::uint64_t>(std::stoi(match[1].str())) == id) {
             EXPECT_FALSE(foundMatchRoom) << "Room with ID = " << id << " already exist.";
             foundMatchRoom = true;
             EXPECT_EQ(desiredChatroomName, match[2].str());
