@@ -60,11 +60,6 @@ public:
 
 private:
 
-    bool VerifyCertificate(
-        bool preverified, 
-        boost::asio::ssl::verify_context& ctx
-    );
-
     void Handshake();
 
     void OnConnect(
@@ -127,15 +122,34 @@ Connection<Stream>::Connection(std::weak_ptr<Client> client
 }
 
 template<class Stream>
-Connection<Stream>::~Connection() {}
+Connection<Stream>::~Connection() {
+    m_logger.Write(LogType::info, "Connection closed through destructor\n");
+}
 
 template<class Stream>
 void Connection<Stream>::Connect(std::string_view path, std::string_view port) {
     using std::placeholders::_1;
     using std::placeholders::_2;
     
-    m_stream.set_verify_mode(boost::asio::ssl::verify_peer);
-    m_stream.set_verify_callback(std::bind(&Connection::VerifyCertificate, this->shared_from_this(), _1, _2));
+    m_stream.set_verify_mode(boost::asio::ssl::verify_peer
+        | boost::asio::ssl::verify_fail_if_no_peer_cert
+    );
+    // m_stream.set_verify_callback(std::bind(&Connection::VerifyCertificate, this->shared_from_this(), _1, _2));
+    m_stream.set_verify_callback([weak = this->weak_from_this()](
+        bool preverified
+        , boost::asio::ssl::verify_context& ctx) 
+    {
+        // In this example we will simply print the certificate's subject name.
+        char name[256];
+        X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
+        X509_NAME_oneline(X509_get_subject_name(cert), name, 256);
+        
+        if (auto shared = weak.lock(); shared) {
+            shared->m_logger.Write(LogType::info, "Verifying", name, "\n");
+        }
+
+        return preverified;
+    });
 
     asio::ip::tcp::resolver resolver(*m_io);
     const auto endpoints = resolver.resolve(path, port);
@@ -149,20 +163,6 @@ void Connection<Stream>::Connect(std::string_view path, std::string_view port) {
             std::bind(&Connection::OnConnect, this->shared_from_this(), _1, _2)
         );
     }
-}
-
-template<class Stream>
-bool Connection<Stream>::VerifyCertificate(
-    bool preverified, 
-    boost::asio::ssl::verify_context& ctx
-) {
-    // In this example we will simply print the certificate's subject name.
-    char name[256];
-    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-    X509_NAME_oneline(X509_get_subject_name(cert), name, 256);
-    m_logger.Write(LogType::info, "Verifying", name, "\n");
-
-    return preverified;
 }
 
 template<class Stream>
