@@ -55,6 +55,7 @@ set(client_targets
 )
 
 add_definitions(
+  -DUNIT_TESTS
   -DBOOST_DATE_TIME_NO_LIB 
   -DBOOST_REGEX_NO_LIB 
   -D_WIN32_WINNT=0x0601
