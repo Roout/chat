@@ -53,7 +53,7 @@ bool RoomService::AssignChatroom(std::uint64_t chatroomId, const std::shared_ptr
     // Remove session from the hall
     const auto isRemoved = m_hall->RemoveSession(session.get());
     if (!isRemoved) {
-        // TODO: can't find session in chatroom for unAuth
+        assert(false && "Can't find session in chatroom for unAuth");
     }
 
     { // Block
@@ -94,7 +94,7 @@ void RoomService::BroadcastOnly(
 void RoomService::LeaveChatroom(std::uint64_t chatroomId, const std::shared_ptr<Session>& session) {
     // Check whether it's a hall chatroom
     if (chatroomId == m_hall->GetId()) {
-        /// TODO: user can't leave hall!
+        // user can't leave hall!
         return;
     }     
     std::shared_ptr<Chatroom> room{ nullptr };
@@ -102,13 +102,12 @@ void RoomService::LeaveChatroom(std::uint64_t chatroomId, const std::shared_ptr<
         std::lock_guard<std::mutex> lock{ m_mutex };
         if (auto it = m_chatrooms.find(chatroomId); it != m_chatrooms.end()) {
             room = it->second;
-            assert(room && "Room can be nullptr");
+            assert(room && "Room can not be nullptr");
         }
     } // Release
 
     if (room && room->RemoveSession(session.get())) {
         if (std::lock_guard<std::mutex> lock{ m_mutex }; room->IsEmpty()) {
-            // FIXME: what if new room will be added at this moment?
             this->RemoveChatroom(chatroomId);
         } 
         (void) m_hall->AddSession(session);

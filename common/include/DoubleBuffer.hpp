@@ -40,7 +40,6 @@ public:
     }
 
 private:
-    /// TODO: introduce new class double buffer or look for it in boost.
 
     using DoubleBuffer = std::array<std::vector<std::string>, 2>;
 

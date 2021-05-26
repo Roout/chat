@@ -133,10 +133,6 @@ private:
      */
     asio::deadline_timer m_timer;
 
-    // TODO: Switch to raw pointer as connection won't live more 
-    // than session. In this way it will be clear that the session
-    // has ownerships over this queue (it will be switched there to 
-    // a `std::unique_ptr`)
     std::shared_ptr<rt::RequestQueue> m_incommingRequests{ nullptr };
 
     std::weak_ptr<Session> m_subscriber{};

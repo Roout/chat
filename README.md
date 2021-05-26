@@ -63,12 +63,12 @@ gen-crt.sh server
 - [x] simple protocol & parser for text messages
   - [x] define message structure
   - [x] define parser
-- [ ] one chatroom with several users
-  - [ ] it will broadcast if somebody joined
-  - [ ] it will broadcast if somebody leave
+- [x] one chatroom with several users
+  - [x] it will broadcast if somebody joined
+  - [x] it will broadcast if somebody leave
   - [ ] timeouts with timers for the server to avoid server's abuse
   - [ ] force to choose username
   - [ ] add login/logout
-  - [ ] add SSL
-- [ ] support multithreading for server as there will be several clients who can write/read to/from 'chatroom'
+  - [x] add SSL
+- [x] support multithreading for server
 - [ ] implement some simple GUI for the clients

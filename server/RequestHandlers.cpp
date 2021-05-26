@@ -46,7 +46,6 @@ namespace RequestHandlers {
     bool LeaveChatroom::IsValidRequest() {
         m_reply.m_query = QueryType::LEAVE_CHATROOM;
         // - only acknowledged client can join/leave the room
-        // TODO: - must be in chatroom
         if (m_service->IsAcknowleged()) {
             m_reply.m_status = 200;
         }
@@ -66,7 +65,6 @@ namespace RequestHandlers {
     };
 
     bool JoinChatroom::IsValidRequest() {
-        /// TODO: update
         m_reply.m_query = QueryType::JOIN_CHATROOM;
 
         if (m_service->IsAcknowleged() == false) {
