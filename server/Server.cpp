@@ -120,6 +120,7 @@ void Server::Start() {
             this->Write(LogType::info, 
                 "Server accepted connection on endpoint:", m_socket->remote_endpoint(err), '\n'
             ); 
+
             // Session won't live more than room service cuz service was destroyed or closed
             // when all sessions had been closed.
             const auto session { std::make_shared<Session>(
@@ -127,12 +128,17 @@ void Server::Start() {
                 , m_service
                 , m_context
                 , m_sslContext) };
-            session->Subscribe();
-            session->Handshake();
-            // TODO: need to add session only after successfull handshake
-            if (!m_service->AddSession(session)) {
-                // TODO: failed to add new session most likely due to connection limit 
+
+            if (m_service->AddSession(session)) {
+				session->Subscribe();
+				// if handshake failed the session will be closed 
+				// and removed from the room
+				session->Handshake();
             }
+			else {
+				// TODO: failed to add new session most likely due to connection limit 
+			}
+
             // wait for the new connections again
             this->Start();
         }
