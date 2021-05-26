@@ -31,7 +31,7 @@ namespace chat {
         std::array<std::shared_ptr<Session>, MAX_CONNECTIONS> m_sessions;
         
     private:
-        inline static std::size_t m_instances { Chatroom::NO_ROOM };
+        inline static std::size_t m_instances { Chatroom::NO_ROOM + 1U };
     };
 
     Chatroom::Impl::Impl() : 
