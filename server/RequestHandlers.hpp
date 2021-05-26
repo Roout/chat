@@ -151,16 +151,12 @@ std::unique_ptr<RequestHandlers::Executor> CreateExecutor(
     const Internal::Request *request, 
     Session * service
  ) {
-    /**
-     *  TODO: add comile-time check for existance of 
-     * executor which handle given QueryType 
-     */
-    static_assert( true, 
-        "Fail instantinate CreateExecutor function"
-    );
-
     using namespace RequestHandlers;
     using ExecutorType = typename Traits::RequestExecutor<query>::Type; 
+ 
+    static_assert (!std::is_same_v<ExecutorType, void>, 
+        "Fail instantinate CreateExecutor function"
+    );
 
     return std::make_unique<ExecutorType>(request, service);
 } 
